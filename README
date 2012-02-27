@@ -1,0 +1,7 @@
+to get a iLBC.swc you will need to install Adobe Alchemy (http://labs.adobe.com/technologies/alchemy/)
+
+Run in iLBC dir:
+# alc-on
+# make swc
+
+To use you'll need to import iLBC.swc into your project and call the defined as3 methods in iLBC_as3_wrapper.c and follow the instructions for running an Alchemy extension including initing, etc. as3 Example to follow.
