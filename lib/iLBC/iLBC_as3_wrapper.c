@@ -111,23 +111,6 @@ int closeByteArray(void * cookie)
 	return 0;
 }
 
-//TODO: copied from
-//https://github.com/kikko/Shine-MP3-Encoder-on-AS3-Alchemy/blob/master/lib/shine/portableio.c
-static void SwapBytesInWords( short *loc, int words )
-{
-    int i;
-    short thisval;
-    char *dst, *src;
-    src = (char *) &thisval;
-    for ( i = 0; i < words; i++ )
-    {
-        thisval = *loc;
-        dst = (char *) loc++;
-        dst[0] = src[1];
-        dst[1] = src[0];
-    }
-}
-
 static AS3_Val encodeForFlash(void * self, AS3_Val args)
 {
 	void * ref;
@@ -153,7 +136,6 @@ static AS3_Val encodeForFlash(void * self, AS3_Val args)
 	iLBC_Enc_Inst_t Enc_Inst;
 	initEncode(&Enc_Inst, 30);
 	while (fread(data,sizeof(short),Enc_Inst.blockl,input)== Enc_Inst.blockl) {
-		// TODO: Use SwapBytesInWords here?
 		len = encode(&Enc_Inst, encoded_data, data);
 		fwrite(encoded_data, sizeof(unsigned char), len, output);
 	}
