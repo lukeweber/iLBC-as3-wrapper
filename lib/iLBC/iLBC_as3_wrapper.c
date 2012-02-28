@@ -153,7 +153,14 @@ static AS3_Val encodeForFlash(void * self, AS3_Val args)
 	iLBC_Enc_Inst_t Enc_Inst;
 	initEncode(&Enc_Inst, 30);
 	while (fread(data,sizeof(short),Enc_Inst.blockl,input)== Enc_Inst.blockl) {
-		decodeForFlash(void * self, AS3_Val args)
+		// TODO: Use SwapBytesInWords here?
+		len = encode(&Enc_Inst, encoded_data, data);
+		fwrite(encoded_data, sizeof(unsigned char), len, output);
+	}
+	return AS3_Int(1);
+}
+
+static AS3_Val decodeForFlash(void * self, AS3_Val args)
 {
 	void * ref;
 	void * src;
