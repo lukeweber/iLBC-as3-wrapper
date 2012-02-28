@@ -25,11 +25,6 @@
 
 /*----------------------------------------------------------------*
 *  Encoder interface function
-
-
-
-
-
 *---------------------------------------------------------------*/
 
 short encode(   /* (o) Number of bytes encoded */
@@ -73,9 +68,7 @@ short decode(       /* (o) Number of decoded samples */
 		printf("\nERROR - Wrong mode - 0, 1 allowed\n"); exit(3);}
 
 	/* do actual decoding of block */
-
-	iLBC_decode(decblock, (unsigned char *)encoded_data,
-		iLBCdec_inst, mode);
+	iLBC_decode(decblock, (unsigned char *)encoded_data, iLBCdec_inst, mode);
 
 	/* convert to short */
 	for (k=0; k<iLBCdec_inst->blockl; k++){
@@ -118,6 +111,23 @@ int closeByteArray(void * cookie)
 	return 0;
 }
 
+//TODO: copied from
+//https://github.com/kikko/Shine-MP3-Encoder-on-AS3-Alchemy/blob/master/lib/shine/portableio.c
+static void SwapBytesInWords( short *loc, int words )
+{
+    int i;
+    short thisval;
+    char *dst, *src;
+    src = (char *) &thisval;
+    for ( i = 0; i < words; i++ )
+    {
+        thisval = *loc;
+        dst = (char *) loc++;
+        dst[0] = src[1];
+        dst[1] = src[0];
+    }
+}
+
 static AS3_Val encodeForFlash(void * self, AS3_Val args)
 {
 	void * ref;
@@ -125,9 +135,9 @@ static AS3_Val encodeForFlash(void * self, AS3_Val args)
 	void * dest;
 	FILE *input;
 	FILE *output;
-	short data[BLOCKL_MAX];
 	int len;
-    short encoded_data[ILBCNOOFWORDS_MAX];
+	short data[BLOCKL_MAX];
+	short encoded_data[ILBCNOOFWORDS_MAX];
 
 	AS3_ArrayValue(args, "AS3ValType, AS3ValType, AS3ValType", &ref, &src, &dest);
 
@@ -143,22 +153,15 @@ static AS3_Val encodeForFlash(void * self, AS3_Val args)
 	iLBC_Enc_Inst_t Enc_Inst;
 	initEncode(&Enc_Inst, 30);
 	while (fread(data,sizeof(short),Enc_Inst.blockl,input)== Enc_Inst.blockl) {
-		len=encode(&Enc_Inst, encoded_data, data);
-		fwrite(encoded_data, sizeof(unsigned char), len, output);
-	}
-	return AS3_Int(1);
-}
-
-static AS3_Val decodeForFlash(void * self, AS3_Val args)
+		decodeForFlash(void * self, AS3_Val args)
 {
 	void * ref;
 	void * src;
 	void * dest;
 	FILE *input;
 	FILE *output;
-	short data[BLOCKL_MAX];
+	short encoded_data[ILBCNOOFWORDS_MAX], decoded_data[BLOCKL_MAX];
 	int len;
-	short decoded_data[BLOCKL_MAX];
 
 	AS3_ArrayValue(args, "AS3ValType, AS3ValType, AS3ValType", &ref, &src, &dest);
 
@@ -173,8 +176,8 @@ static AS3_Val decodeForFlash(void * self, AS3_Val args)
 
 	iLBC_Dec_Inst_t Dec_Inst;
 	initDecode(&Dec_Inst, 30, 1);//30ms mode
-	while (fread(data,sizeof(short),Dec_Inst.blockl,input)== Dec_Inst.blockl) {
-		len=decode(&Dec_Inst, decoded_data, data, 1);//1 for no packet loss
+	while (fread(encoded_data,sizeof(unsigned char),Dec_Inst.no_of_bytes,input)== Dec_Inst.no_of_bytes) {
+		len=decode(&Dec_Inst, decoded_data, encoded_data, 1);//1 for no packet loss
 		/* write output file */
 		fwrite(decoded_data,sizeof(short),len,output);
 	}
