@@ -1,5 +1,6 @@
 package org.ilbc.codec {
 	
+	import flash.utils.Endian;
 	import cmodule.iLBC.CLibInit;
 	import flash.utils.getTimer;
 	import flash.utils.ByteArray;
@@ -53,12 +54,13 @@ package org.ilbc.codec {
 		// ------------------------
 		
 		/**
-		 * Encodes an (specs??) audio stream to iLBC.
+		 * Encodes an (16 bit 8kHz) audio stream to iLBC.
 		 */
 		public function encode(data:ByteArray):ByteArray {
 			trace("ILBCCodec.encode(data):", data.length);
 			
 			encodedData = new ByteArray();
+			encodedData.endian = Endian.LITTLE_ENDIAN;
 			decodedData = data;
 			
 			start();
@@ -70,13 +72,14 @@ package org.ilbc.codec {
 		}
 		
 		/**
-		 * Decodes an iLBC encoded audio stream to (specs??).
+		 * Decodes an iLBC encoded audio stream (16 bit 8kHz).
 		 */
 		public function decode(data:ByteArray):ByteArray {
 			trace("ILBCCodec.decode(data):", data.length);
 			
 			encodedData = data;
 			decodedData = new ByteArray();
+			decodedData.endian = Endian.LITTLE_ENDIAN;
 			
 			start();
 			
