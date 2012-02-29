@@ -156,7 +156,7 @@ static AS3_Val decodeForFlash(void * self, AS3_Val args)
 	short encoded_data[ILBCNOOFWORDS_MAX], decoded_data[BLOCKL_MAX];
 	int len;
 
-	AS3_ArrayValue(args, "AS3ValType, AS3ValType, AS3ValType, AS3ValType", &ref, &src, &dest);
+	AS3_ArrayValue(args, "AS3ValType, AS3ValType, AS3ValType", &ref, &src, &dest);
 
 	//flashErrorsRef = (AS3_Val)ref;
 	

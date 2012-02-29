@@ -2,10 +2,10 @@ iLBC or internet low bitrate codec. This is a swc that wraps the base functional
 More info: http://en.wikipedia.org/wiki/Internet_Low_Bit_Rate_Codec
 
 ilbc encode input and decode output:
-pcm 16 bit signed, little-Endian, 8000 khz
+pcm 16 bit signed, little-Endian, 8 khz
 
 Flash Microphone audio:
-pcm 32 bit float, Big-Endian, 44100 khz
+pcm 32 bit float, Big-Endian,  mic.rate khz (http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/media/Microphone.html). This means that to use this with flash audio you will need to set mic.rate=8 and convert from float to short.
 
 To compile .swc:
 Install Adobe Alchemy http://labs.adobe.com/technologies/alchemy/
