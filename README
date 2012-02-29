@@ -1,7 +1,16 @@
-to get a iLBC.swc you will need to install Adobe Alchemy (http://labs.adobe.com/technologies/alchemy/)
+iLBC or internet low bitrate codec. This is a swc that wraps the base functionality of the iLBC codec as extraced from rfc3951. Royalty free and part of the new webrtc project.
+More info: http://en.wikipedia.org/wiki/Internet_Low_Bit_Rate_Codec
 
-Run in iLBC dir:
+ilbc encode input and decode output:
+pcm 16 bit signed, little-Endian, 8000 khz
+
+Flash Microphone audio:
+pcm 32 bit float, Big-Endian, 44100 khz
+
+To compile .swc:
+Install Adobe Alchemy http://labs.adobe.com/technologies/alchemy/
+# cd lib/ilbc
 # alc-on
 # make swc
 
-To use you'll need to import iLBC.swc into your project and call the defined as3 methods in iLBC_as3_wrapper.c and follow the instructions for running an Alchemy extension including initing, etc. as3 Example to follow.
+Example usage of bin/iLBC.swc at src/org/ilbc/codec/ILBCCodec.as
