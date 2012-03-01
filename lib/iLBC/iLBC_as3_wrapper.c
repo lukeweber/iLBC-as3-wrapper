@@ -111,9 +111,13 @@ int closeByteArray(void * cookie)
 	return 0;
 }
 
+
+
 static AS3_Val encodeForFlash(void * self, AS3_Val args)
 {
-	void * ref;
+	AS3_Val open;
+	AS3_Val progress;
+	AS3_Val complete;
 	void * src;
 	void * dest;
 	FILE *input;
@@ -122,9 +126,11 @@ static AS3_Val encodeForFlash(void * self, AS3_Val args)
 	short data[BLOCKL_MAX];
 	short encoded_data[ILBCNOOFWORDS_MAX];
 
-	AS3_ArrayValue(args, "AS3ValType, AS3ValType, AS3ValType", &ref, &src, &dest);
+	AS3_ArrayValue(args, "AS3ValType, AS3ValType, AS3ValType, AS3ValType, AS3ValType", &open, &progress, &complete, &src, &dest);
 
 	//flashErrorsRef = (AS3_Val)ref;
+	
+	AS3_Call(open, NULL, NULL);
 	
 	input	= funopen((void *)src, readByteArray, writeByteArray, seekByteArray, closeByteArray);
 	output	= funopen((void *)dest, readByteArray, writeByteArray, seekByteArray, closeByteArray);
@@ -133,22 +139,29 @@ static AS3_Val encodeForFlash(void * self, AS3_Val args)
 		ERROR("Unable to set bytes arrays");
 	}
 	
+	AS3_CallT(progress, NULL, "IntType", 0);
 	iLBC_Enc_Inst_t Enc_Inst;
 	initEncode(&Enc_Inst, 30);
 	int loop = 0;
 	while (fread(data,sizeof(short),Enc_Inst.blockl,input)== Enc_Inst.blockl) {
 		len = encode(&Enc_Inst, encoded_data, data);
 		fwrite(encoded_data, sizeof(unsigned char), len, output);
-		if(loop++ % 10 == 0){
-			flyield();//Give up time slice
-		}
+		AS3_CallT(progress, NULL, "IntType", loop);
+		flyield();//Give up time slice
+		AS3_CallT(progress, NULL, "IntType", loop);
 	}
+
+	fclose(input);
+	fclose(output);
+	AS3_Call(complete, NULL, NULL);
 	return AS3_Int(1);
 }
 
 static AS3_Val decodeForFlash(void * self, AS3_Val args)
 {
-	void * ref;
+	AS3_Val open;
+	AS3_Val progress;
+	AS3_Val complete;
 	void * src;
 	void * dest;
 	FILE *input;
@@ -156,10 +169,12 @@ static AS3_Val decodeForFlash(void * self, AS3_Val args)
 	short encoded_data[ILBCNOOFWORDS_MAX], decoded_data[BLOCKL_MAX];
 	int len;
 
-	AS3_ArrayValue(args, "AS3ValType, AS3ValType, AS3ValType", &ref, &src, &dest);
+	AS3_ArrayValue(args, "AS3ValType, AS3ValType, AS3ValType, AS3ValType, AS3ValType", &open, &progress, &complete, &src, &dest);
 
 	//flashErrorsRef = (AS3_Val)ref;
 	
+	AS3_Call(open, NULL, NULL);
+
 	input	= funopen((void *)src, readByteArray, writeByteArray, seekByteArray, closeByteArray);
 	output	= funopen((void *)dest, readByteArray, writeByteArray, seekByteArray, closeByteArray);
 	
@@ -167,17 +182,22 @@ static AS3_Val decodeForFlash(void * self, AS3_Val args)
 		ERROR("Unable to set bytes arrays");
 	}
 
+	AS3_CallT(progress, NULL, "IntType", 0);
 	iLBC_Dec_Inst_t Dec_Inst;
 	initDecode(&Dec_Inst, 30, 1);//30ms mode
 	int loop = 0;
 	while (fread(encoded_data,sizeof(unsigned char),Dec_Inst.no_of_bytes,input)== Dec_Inst.no_of_bytes) {
 		len=decode(&Dec_Inst, decoded_data, encoded_data, 1);//1 for no packet loss
 		/* write output file */
+		AS3_CallT(progress, NULL, "IntType", loop);
 		fwrite(decoded_data,sizeof(short),len,output);
-		if(loop++ % 10 == 0){
-			flyield();//Give up time slice
-		}
+		flyield();//Give up time slice
+		AS3_CallT(progress, NULL, "IntType", loop);
 	}
+
+	fclose(input);
+	fclose(output);
+	AS3_Call(complete, NULL, NULL);
 	return AS3_Int(1);
 }
 
