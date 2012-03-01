@@ -84,8 +84,6 @@ short decode(       /* (o) Number of decoded samples */
 	return (iLBCdec_inst->blockl);
 }
 
-
-// ALCHEMY UTILS
 int readByteArray(void *cookie, char *dst, int size)
 {
 	return AS3_ByteArray_readBytes(dst, (AS3_Val)cookie, size);
@@ -104,7 +102,6 @@ fpos_t seekByteArray(void *cookie, fpos_t offs, int whence)
 int closeByteArray(void * cookie)
 {
 	AS3_Val zero = AS3_Int(0);
-
 	/* just reset the position */
 	AS3_SetS((AS3_Val)cookie, "position", zero);
 	AS3_Release(zero);
@@ -112,7 +109,7 @@ int closeByteArray(void * cookie)
 }
 
 
-static AS3_Val encodeForFlash(void * self, AS3_Val args)
+static void encodeForFlash(void * self, AS3_Val args)
 {
 	AS3_Val open;
 	AS3_Val progress;
@@ -136,29 +133,24 @@ static AS3_Val encodeForFlash(void * self, AS3_Val args)
 		fprintf(stderr, "Unable to set bytes arrays");
 	}
 	
-	//AS3_CallT(progress, NULL, "IntType", 0);
 	iLBC_Enc_Inst_t Enc_Inst;
 	initEncode(&Enc_Inst, 30);
 	int loop = 0;
 	while (fread(data,sizeof(short),Enc_Inst.blockl,input)== Enc_Inst.blockl) {
 		len = encode(&Enc_Inst, encoded_data, data);
 		fwrite(encoded_data, sizeof(unsigned char), len, output);
-		/*if(loop % 10 == 0){
+		if(loop % 10 == 0){
 			AS3_CallT(progress, NULL, "IntType", loop++);
-			flyield();//Give up time slice
-		}*/
-		//AS3_CallT(progress, NULL, "IntType", loop);
-		flyield();//Give up time slice
-	}
-
+			flyield();//yield to main process
+		}
+    }
 
 	fclose(input);
 	fclose(output);
 	AS3_Call(complete, NULL, NULL);
-	return AS3_Int(1);
 }
 
-static AS3_Val decodeForFlash(void * self, AS3_Val args)
+static void decodeForFlash(void * self, AS3_Val args)
 {
 	AS3_Val open;
 	AS3_Val progress;
@@ -188,31 +180,28 @@ static AS3_Val decodeForFlash(void * self, AS3_Val args)
 	while (fread(encoded_data,sizeof(unsigned char),Dec_Inst.no_of_bytes,input)== Dec_Inst.no_of_bytes) {
 		len=decode(&Dec_Inst, decoded_data, encoded_data, 1);//1 for no packet loss
 		/* write output file */
-		/*if(loop % 10 == 0){
+		if(loop % 10 == 0){
 			AS3_CallT(progress, NULL, "IntType", loop++);
-		}*/
-		flyield();//Give up time slice
+            flyield();//yield to main process
+		}
 		fwrite(decoded_data,sizeof(short),len,output);
 	}
 
 	fclose(input);
 	fclose(output);
 	AS3_Call(complete, NULL, NULL);
-	return AS3_Int(1);
 }
 
 int main(int argc, char **argv)
 {
-	AS3_Val encodeMethod = AS3_FunctionAsync( NULL, encodeForFlash);
-//	AS3_Val encodeMethod = AS3_Function( NULL, encodeForFlash);
-	AS3_Val decodeMethod = AS3_FunctionAsync( NULL, decodeForFlash);
-//	AS3_Val decodeMethod = AS3_Function( NULL, decodeForFlash);
-
-	AS3_Val result = AS3_Object("encode:AS3ValType, decode:AS3ValType", encodeMethod, decodeMethod);
-
+	AS3_Val ilbc_lib = AS3_Object("");
+    AS3_Val encodeMethod = AS3_FunctionAsync( NULL, (AS3_ThunkProc) encodeForFlash);
+	AS3_Val decodeMethod = AS3_FunctionAsync( NULL, (AS3_ThunkProc) decodeForFlash);
+    AS3_SetS(ilbc_lib, "encode", encodeMethod);
+    AS3_SetS(ilbc_lib, "decode", decodeMethod);
 	AS3_Release( encodeMethod );
 	AS3_Release( decodeMethod );
-	
-	AS3_LibInit( result );
+	AS3_LibInit( ilbc_lib );
+    
 	return 0;
 }
