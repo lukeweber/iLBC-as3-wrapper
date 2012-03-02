@@ -1,8 +1,7 @@
 iLBC AS3 Wrapper
 ==========
 
-iLBC or internet low bitrate codec. This is a swc that wraps the base functionality of the iLBC codec as extraced from rfc3951. Codec is now maintained by google as part of the webRTC project.
-More info: http://en.wikipedia.org/wiki/Internet_Low_Bit_Rate_Codec
+Internet low bitrate codec. This is a swc that wraps the base functionality of the iLBC codec as extraced from rfc3951. Codec is now maintained by google as part of the webRTC project. More info: http://en.wikipedia.org/wiki/Internet_Low_Bit_Rate_Codec
 
 ### iLBC encode input and decode output
 
