@@ -18,8 +18,10 @@ PCM 16 bit signed, little-Endian, 8 kHz
 PCM 32 bit float, Big-Endian, mic.rate kHz [Flash Microphone Doc](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/media/Microphone.html). This means that to use this with flash audio you will need to set mic.rate=8 and convert from float to short.
 
 ### Compile iLBC.swc
-[Download Adobe Alchemy](http://labs.adobe.com/downloads/alchemy.html)
-[Getting Started/Install Adobe Alchemy](http://labs.adobe.com/wiki/index.php/Alchemy:Documentation:Getting_Started)
+
+* [Download Adobe Alchemy](http://labs.adobe.com/downloads/alchemy.html)
+* [Download flex 4.6](http://opensource.adobe.com/wiki/display/flexsdk/Download+Flex+4.6)
+* [Getting Started/Install Adobe Alchemy](http://labs.adobe.com/wiki/index.php/Alchemy:Documentation:Getting_Started)
 
 	$ cd lib/ilbc
 	$ alc-on
