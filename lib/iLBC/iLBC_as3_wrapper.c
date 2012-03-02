@@ -1,11 +1,8 @@
 /******************************************************************
 
-	iLBC Speech Coder ANSI-C Source Code
+	iLBC Speech Coder as3 wrapper using Adobe Alchemy
 
-	iLBC_test.c
-
-	Copyright (C) The Internet Society (2004).
-	All Rights Reserved.
+	iLBC_as3_wrapper.c
 
 ******************************************************************/
 
@@ -17,9 +14,6 @@
 #include "iLBC_encode.h"
 #include "iLBC_decode.h"
 #include "AS3.h"
-
-/* Runtime statistics */
-#include <time.h>
 
 #define ILBCNOOFWORDS_MAX   (NO_OF_BYTES_30MS/2)
 
@@ -84,30 +78,14 @@ short decode(       /* (o) Number of decoded samples */
 	return (iLBCdec_inst->blockl);
 }
 
-int readByteArray(void *cookie, char *dst, int size)
-{
-	return AS3_ByteArray_readBytes(dst, (AS3_Val)cookie, size);
-}
-
-int writeByteArray(void *cookie, const char *src, int size)
-{
-	return AS3_ByteArray_writeBytes((AS3_Val)cookie, (char *)src, size);
-}
-
-fpos_t seekByteArray(void *cookie, fpos_t offs, int whence)
-{
-	return AS3_ByteArray_seek((AS3_Val)cookie, offs, whence);
-}
-
-int closeByteArray(void * cookie)
+int resetPositionByteArray(AS3_Val byteArray)
 {
 	AS3_Val zero = AS3_Int(0);
 	/* just reset the position */
-	AS3_SetS((AS3_Val)cookie, "position", zero);
+	AS3_SetS((AS3_Val)byteArray, "position", zero);
 	AS3_Release(zero);
 	return 0;
 }
-
 
 static void encodeForFlash(void * self, AS3_Val args)
 {
@@ -122,6 +100,7 @@ static void encodeForFlash(void * self, AS3_Val args)
 	initEncode(&Enc_Inst, 30);
 	remainingBytes = srcLen;
 	int i = 0;
+	resetPositionByteArray(src);
 	while (remainingBytes > 0){
 		remainingBytes -= AS3_ByteArray_readBytes(raw_data, src, Enc_Inst.blockl * sizeof(short));
 		len = encode(&Enc_Inst, encoded_data, raw_data);
@@ -132,7 +111,9 @@ static void encodeForFlash(void * self, AS3_Val args)
 		}
 		i++;
 	}
-	
+
+	resetPositionByteArray(src);
+	resetPositionByteArray(dest);
 	// Don't remove progess 100 call here, else complete won't be called!
 	AS3_CallT(progress, NULL, "IntType", 100);
 }
@@ -151,6 +132,7 @@ static void decodeForFlash(void * self, AS3_Val args)
 	
 	int i = 0;
 	int loops = srcLen / Dec_Inst.no_of_bytes;
+	resetPositionByteArray(src);
 	while(AS3_ByteArray_readBytes(encoded_data, src, Dec_Inst.no_of_bytes) == Dec_Inst.no_of_bytes){
 		len = decode(&Dec_Inst, decoded_data, encoded_data, 1);//1 for no packet loss
 		AS3_ByteArray_writeBytes(dest, decoded_data, len * sizeof(short));
@@ -161,7 +143,9 @@ static void decodeForFlash(void * self, AS3_Val args)
 		}
 		i++;
 	}
-	
+
+	resetPositionByteArray(src);
+	resetPositionByteArray(dest);
 	// Don't remove progess 100 call here, else complete won't be called!
 	AS3_CallT(progress, NULL, "IntType", 100);
 }
