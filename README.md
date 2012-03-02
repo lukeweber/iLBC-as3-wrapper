@@ -3,6 +3,11 @@ iLBC AS3 Wrapper
 
 Internet low bitrate codec. This is a swc that wraps the base functionality of the iLBC codec as extraced from rfc3951. Codec is now maintained by google as part of the webRTC project. More info: http://en.wikipedia.org/wiki/Internet_Low_Bit_Rate_Codec
 
+To use this with a flash microphone sampledata/bytearray:
+* mic.rate = 8 // 8 kHz
+* Convert from big to little endian for iLBC (just readFloat the byte array into a little endian array.
+* Convert from 32 bit float to 16 bit signed audio (example below)
+
 ### iLBC encode input and decode output
 
 PCM 16 bit signed, little-Endian, 8 kHz
