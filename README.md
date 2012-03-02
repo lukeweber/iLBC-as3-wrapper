@@ -25,10 +25,10 @@ Example
 Usage of bin/iLBC.swc at src/org/ilbc/codec/ILBCCodec.as
 
 Converting 32 bit floating point to 16 bit signed int in AS3
+
 	private static const SHORT_MAX_VALUE:int = 0x7fff;
 	while( source.bytesAvailable ) {
 		var sample:Number = source.readFloat() * SHORT_MAX_VALUE;
-		
 		// Make sure we don't overflow.
 		if (sample < -SHORT_MAX_VALUE) sample = -SHORT_MAX_VALUE;
 		else if (sample > SHORT_MAX_VALUE) sample = SHORT_MAX_VALUE;
