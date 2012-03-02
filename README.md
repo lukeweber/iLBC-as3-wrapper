@@ -1,7 +1,7 @@
 iLBC AS3 Wrapper
 ==========
 
-Internet low bitrate codec. This is a swc that wraps the base functionality of the iLBC codec as extraced from rfc3951. Codec is now maintained by google as part of the webRTC project. More info: http://en.wikipedia.org/wiki/Internet_Low_Bit_Rate_Codec
+[Internet low bitrate codec](http://en.wikipedia.org/wiki/Internet_Low_Bit_Rate_Codec). This is a swc that wraps the base functionality of the iLBC codec as extraced from rfc3951. Codec is now maintained by google as part of the [WebRTC](http://www.webrtc.org/) project.
 
 To use this with a flash microphone sampledata/bytearray:
 
@@ -15,10 +15,11 @@ PCM 16 bit signed, little-Endian, 8 kHz
 
 ### Flash Microphone audio
 
-PCM 32 bit float, Big-Endian, mic.rate kHz (http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/media/Microphone.html). This means that to use this with flash audio you will need to set mic.rate=8 and convert from float to short.
+PCM 32 bit float, Big-Endian, mic.rate kHz [Flash Microphone Doc](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/media/Microphone.html). This means that to use this with flash audio you will need to set mic.rate=8 and convert from float to short.
 
 ### Compile iLBC.swc
-Install Adobe Alchemy http://labs.adobe.com/technologies/alchemy/
+[Download Adobe Alchemy](http://labs.adobe.com/downloads/alchemy.html)
+[Getting Started/Install Adobe Alchemy](http://labs.adobe.com/wiki/index.php/Alchemy:Documentation:Getting_Started)
 
 	$ cd lib/ilbc
 	$ alc-on
@@ -29,6 +30,9 @@ Example
 Full Usage of bin/iLBC.swc at src/org/ilbc/codec/ILBCCodec.as
 
 ### AS3 Code
+
+Methods encode and decode are asyncronous and take as their first params a callback for completed. As well yield param is frequency of loops of processing audio that will be completed before the function calls flyield(). flyeidl(): "This method will force the Alchemy state machine to give up it's time slice. Execution will return to the line following this call on the next Alchemy time-slicing timer tick." - Time slicing timer tick I believe is 1ms. 
+
 Imports
 
 	import cmodule.iLBC.CLibInit;
