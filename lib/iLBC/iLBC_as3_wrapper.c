@@ -111,31 +111,35 @@ int closeByteArray(void * cookie)
 
 static void encodeForFlash(void * self, AS3_Val args)
 {
-	AS3_Val open, progress, complete;
+	AS3_Val progress;
 	AS3_Val src, dest;
-	int len, srcLen, yieldTicks;
+	int len, srcLen, remainingBytes, yieldTicks;
 	short raw_data[BLOCKL_MAX], encoded_data[ILBCNOOFWORDS_MAX];
 
 	AS3_ArrayValue(args, "AS3ValType, AS3ValType, AS3ValType, IntType, IntType", &progress, &src, &dest, &srcLen, &yieldTicks);
 
 	iLBC_Enc_Inst_t Enc_Inst;
 	initEncode(&Enc_Inst, 30);
-	int i;
-	int loops = srcLen / sizeof(short) / Enc_Inst.blockl;
-	for(i = 0; i < loops; i++){
-		AS3_ByteArray_readBytes(raw_data, src, (Enc_Inst.blockl * sizeof(short)));
+	remainingBytes = srcLen;
+	int i = 0;
+	while (remainingBytes > 0){
+		remainingBytes -= AS3_ByteArray_readBytes(raw_data, src, Enc_Inst.blockl * sizeof(short));
 		len = encode(&Enc_Inst, encoded_data, raw_data);
 		AS3_ByteArray_writeBytes(dest, encoded_data, len);
-		if(i % 10 == 0){
-			AS3_CallT(progress, NULL, "IntType", i);
+		if(i % yieldTicks == 0){
+			AS3_CallT(progress, NULL, "IntType", (int)((1 - ((float)remainingBytes / srcLen)) * 100));
 			flyield();//yield to main process
 		}
+		i++;
 	}
+	
+	// Don't remove progess 100 call here, else complete won't be called!
+	AS3_CallT(progress, NULL, "IntType", 100);
 }
 
 static void decodeForFlash(void * self, AS3_Val args)
 {
-	AS3_Val open, progress, complete;
+	AS3_Val progress;
 	AS3_Val src, dest;
 	int len, srcLen, yieldTicks;
 	short encoded_data[ILBCNOOFWORDS_MAX], decoded_data[BLOCKL_MAX];
@@ -145,18 +149,21 @@ static void decodeForFlash(void * self, AS3_Val args)
 	iLBC_Dec_Inst_t Dec_Inst;
 	initDecode(&Dec_Inst, 30, 1);//30ms mode
 	
-	int i;
+	int i = 0;
 	int loops = srcLen / Dec_Inst.no_of_bytes;
-	for(i = 0; i < loops; i++){
-		AS3_ByteArray_readBytes(encoded_data, src, Dec_Inst.no_of_bytes);
-		len=decode(&Dec_Inst, decoded_data, encoded_data, 1);//1 for no packet loss
-		AS3_ByteArray_writeBytes(dest, decoded_data, len);
+	while(AS3_ByteArray_readBytes(encoded_data, src, Dec_Inst.no_of_bytes) == Dec_Inst.no_of_bytes){
+		len = decode(&Dec_Inst, decoded_data, encoded_data, 1);//1 for no packet loss
+		AS3_ByteArray_writeBytes(dest, decoded_data, len * sizeof(short));
 		/* write output file */
 		if(i % yieldTicks == 0){
-			AS3_CallT(progress, NULL, "IntType", i);
+			AS3_CallT(progress, NULL, "IntType", (int)((float)i / loops * 100));
 			flyield();//yield to main process
 		}
+		i++;
 	}
+	
+	// Don't remove progess 100 call here, else complete won't be called!
+	AS3_CallT(progress, NULL, "IntType", 100);
 }
 
 int main(int argc, char **argv)

@@ -41,6 +41,6 @@ swc: $(OBJ)
 	$(CC) $(CC_SWITCHES) -c $< -o $@
 
 clean:
-	rm -f $(OBJ) core *.bak *.o *.exe *.exe.bc *.l.bc *.achacks.* *.swc
+	rm -f $(OBJ) core *.bak *.o *.exe *.exe.bc *.l.bc *.achacks.* *.stackdump *.swc
 
 install:
