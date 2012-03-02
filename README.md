@@ -20,10 +20,32 @@ Install Adobe Alchemy http://labs.adobe.com/technologies/alchemy/
 
 Example
 ------------
+Full Usage of bin/iLBC.swc at src/org/ilbc/codec/ILBCCodec.as
 
-Usage of bin/iLBC.swc at src/org/ilbc/codec/ILBCCodec.as
+### AS3 Code
+Imports
 
-Converting 32 bit floating point to 16 bit signed int in AS3
+	import cmodule.iLBC.CLibInit;
+	import org.ilbc.event.ILBCEvent;
+
+Initialization of lib
+
+	private var ilbcCodec:Object;
+	ilbcCodec = (new cmodule.iLBC.CLibInit).init();
+
+Encode
+
+	encodedData = new ByteArray();
+	encodedData.endian = Endian.LITTLE_ENDIAN;
+	ilbcCodec.encode(encodingCompleteHandler, encodingProgressHandler, rawPCMByteArray, encodedData, decodedData.length, yield);
+
+Decode
+
+	decodedData = new ByteArray();
+	decodedData.endian = Endian.LITTLE_ENDIAN;
+	ilbcCodec.decode(decodingCompleteHandler, decodingProgressHandler, encodedData, decodedData, encodedData.length, yield);
+
+32 bit floating point to 16 bit signed conversion
 
 	private static const SHORT_MAX_VALUE:int = 0x7fff;
 	while( source.bytesAvailable ) {
