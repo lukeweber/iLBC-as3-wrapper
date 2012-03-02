@@ -31,16 +31,23 @@ SOURCES=\
 	iLBC_encode.c
 
 MAIN = iLBC_as3_wrapper.c
+TEST = iLBC_test.c
 
-OBJ = $(SOURCES:.c=.o) $(MAIN:.c=.o)
-
-swc: $(OBJ)
-	$(CC) $(CFLAGS) -swc -o $(PNAME).swc $(OBJ) -lm
+MAIN_OBJ = $(MAIN:.c=.o)
+TEST_OBJ = $(TEST:.c=.o)
+OBJ = $(SOURCES:.c=.o)
+	
+compile_swc: $(OBJ) $(MAIN_OBJ)
+	$(CC) $(CFLAGS) -swc -o $(PNAME).swc $(OBJ) $(MAIN_OBJ) -lm
+	mv $(PNAME).swc ../../bin/
+	
+test: $(OBJ) $(TEST_OBJ)
+	$(CC) $(CFLAGS) -o $(PNAME)_test.a $(OBJ) $(TEST_OBJ) -lm
 
 %.o: %.c
 	$(CC) $(CC_SWITCHES) -c $< -o $@
 
 clean:
-	rm -f $(OBJ) core *.bak *.o *.exe *.exe.bc *.l.bc *.achacks.* *.stackdump *.swc
+	rm -f *.o core *.bak *.a *.exe *.exe.bc *.l.bc *.achacks.* *.stackdump *.swc
 
-install:
+swc: compile_swc clean
