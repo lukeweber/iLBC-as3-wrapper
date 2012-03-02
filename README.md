@@ -19,10 +19,11 @@ PCM 32 bit float, Big-Endian, mic.rate kHz [Flash Microphone Doc](http://help.ad
 
 ### Compile iLBC.swc (optional)
 
-* [Download Adobe Alchemy](http://labs.adobe.com/downloads/alchemy.html)
-* [Download flex 4.6](http://opensource.adobe.com/wiki/display/flexsdk/Download+Flex+4.6)
-* [Getting Started/Install Adobe Alchemy](http://labs.adobe.com/wiki/index.php/Alchemy:Documentation:Getting_Started)
+[Download Adobe Alchemy](http://labs.adobe.com/downloads/alchemy.html)
 
+[Download flex 4.6](http://opensource.adobe.com/wiki/display/flexsdk/Download+Flex+4.6)
+
+[Getting Started/Install Adobe Alchemy](http://labs.adobe.com/wiki/index.php/Alchemy:Documentation:Getting_Started)
 
 	$ cd lib/ilbc
 	$ alc-on
