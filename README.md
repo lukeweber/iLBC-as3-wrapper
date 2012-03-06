@@ -25,13 +25,19 @@ PCM 32 bit float, Big-Endian, mic.rate kHz [Flash Microphone Doc](http://help.ad
 
 [Getting Started/Install Adobe Alchemy](http://labs.adobe.com/wiki/index.php/Alchemy:Documentation:Getting_Started)
 
-	$ cd lib/ilbc
+Two options, you can use the rfc version in lib/rfc or you can use the more up
+to date and actively developed webRTC version at lib/webrtc. rfc as it's a test
+file should compile, webrtc may or may not compile based on future changes of
+the repo. Confirmed working build of webrtc with revision 1842 of trunk.
+
+	$ cd (to webrtc or rfc directory)
 	$ alc-on
-	$ make swc
+	$ make extract
+	$ make all
 
 Example
 ------------
-Full Usage of bin/iLBC.swc at src/org/ilbc/codec/ILBCCodec.as
+Full Usage of bin/iLBC_webrtc.swc at src/org/ilbc/codec/ILBCCodec.as
 
 ### AS3 Code
 
@@ -39,13 +45,13 @@ Methods encode and decode are asyncronous and take as their first params a callb
 
 Imports
 
-	import cmodule.iLBC.CLibInit;
+	import cmodule.iLBC_webrtc.CLibInit;
 	import org.ilbc.event.ILBCEvent;
 
 Initialization of lib
 
 	private var ilbcCodec:Object;
-	ilbcCodec = (new cmodule.iLBC.CLibInit).init();
+	ilbcCodec = (new cmodule.iLBC_webrtc.CLibInit).init();
 
 Encode
 

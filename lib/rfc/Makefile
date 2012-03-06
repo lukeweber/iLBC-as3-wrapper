@@ -1,9 +1,9 @@
 CC = gcc
 ARCH=$(PROC)
-CFLAGS+= -Wall
-CC_SWITCHES = -Wall
+CFLAGS+= -Wall -O3
+CC_SWITCHES = -Wall -O3
 
-PNAME = iLBC
+PNAME = iLBC_rfc
 
 SOURCES=\
 	packing.c\
@@ -36,7 +36,13 @@ TEST = iLBC_test.c
 MAIN_OBJ = $(MAIN:.c=.o)
 TEST_OBJ = $(TEST:.c=.o)
 OBJ = $(SOURCES:.c=.o)
-	
+
+
+all: compile_swc clean
+
+extract:
+	awk -f extract-from-rfc.awk rfc3951.txt
+
 compile_swc: $(OBJ) $(MAIN_OBJ)
 	$(CC) $(CFLAGS) -swc -o $(PNAME).swc $(OBJ) $(MAIN_OBJ) -lm
 	mv $(PNAME).swc ../../bin/
@@ -49,5 +55,3 @@ test: $(OBJ) $(TEST_OBJ)
 
 clean:
 	rm -f *.o core *.bak *.a *.exe *.exe.bc *.l.bc *.achacks.* *.stackdump *.swc
-
-swc: compile_swc clean
