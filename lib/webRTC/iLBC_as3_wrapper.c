@@ -31,7 +31,7 @@ static void encodeForFlash(void * self, AS3_Val args)
 {
 	AS3_Val progress;
 	AS3_Val src, dest;
-	int len, srcLen, remainingBytes, yieldTicks, samples;
+	int len, srcLen, bytesRemaining, yieldTicks, samples;
 	short mode = 30;//30ms
 	short raw_data[BLOCKL_MAX], encoded_data[NO_OF_BYTES_30MS];
 	
@@ -45,23 +45,22 @@ static void encodeForFlash(void * self, AS3_Val args)
 	iLBC_encinst_t *Enc_Inst;
 	WebRtcIlbcfix_EncoderCreate(&Enc_Inst);
 	WebRtcIlbcfix_EncoderInit(Enc_Inst, mode);
-	remainingBytes = srcLen;
-	int i = 0;
+	
+	bytesRemaining = srcLen;
 	resetPositionByteArray(src);
-	while (remainingBytes > 0){
-		remainingBytes -= AS3_ByteArray_readBytes(raw_data, src,(mode<<3) * sizeof(short));
+	int i;
+	for (i = 0; bytesRemaining > 0; i++){
+		bytesRemaining -= AS3_ByteArray_readBytes(raw_data, src,(mode<<3) * sizeof(short));
 		samples = WebRtcIlbcfix_Encode(Enc_Inst, raw_data, (short)(mode<<3), encoded_data);
 		
 		//Base 64
 		len = base64_encode_block((char *)encoded_data, samples, base64_data, &state);
 		AS3_ByteArray_writeBytes(dest, base64_data, len);
 		
-		//AS3_ByteArray_writeBytes(dest, encoded_data, len);
 		if(i % yieldTicks == 0){
-			AS3_CallT(progress, NULL, "IntType", (int)((1 - ((float)remainingBytes / srcLen)) * 100));
+			AS3_CallT(progress, NULL, "IntType", (int)((1 - ((float)bytesRemaining / srcLen)) * 100));
 			flyield();//yield to main process
 		}
-		i++;
 	}
 
 	//Base 64
@@ -81,8 +80,7 @@ static void decodeForFlash(void * self, AS3_Val args)
 {
 	AS3_Val progress;
 	AS3_Val src, dest;
-	int len, srcLen, yieldTicks, samples;
-	//short encoded_data[NO_OF_WORDS_30MS], 
+	int len, srcLen, yieldTicks, samples, bytesRead, bytesRemaining;
 	short decoded_data[BLOCKL_MAX], speechType;
 	short mode = 30;//30 ms
 	
@@ -97,29 +95,26 @@ static void decodeForFlash(void * self, AS3_Val args)
 	iLBC_decinst_t *Dec_Inst;
 	WebRtcIlbcfix_DecoderCreate(&Dec_Inst);
 	WebRtcIlbcfix_DecoderInit(Dec_Inst, mode);
-	
-	
-	int i = 0;
-	int loops = srcLen / NO_OF_BYTES_30MS;
+
 	resetPositionByteArray(src);
+	
 	//base 64 logic
-	int bytesRead;
-	int bytesRemaining = srcLen;
-	while(bytesRemaining > 0){
+	bytesRemaining = srcLen;
+	
+	int i;
+	for (i = 0; bytesRemaining > 0; i++){
 		bytesRead = AS3_ByteArray_readBytes(base64_data, src, 200);//200 base64 bytes will yield 150 bytes or 3 chunks of NO_OF_BYTES_30MS(50)
 		bytesRemaining -= bytesRead;
 		len = base64_decode_block(base64_data, bytesRead, base64_decoded, &state);
 		int j;
 		if(bytesRead % NO_OF_BYTES_30MS == 0){
 			for(j = 0; j < bytesRead; j+= NO_OF_BYTES_30MS){
-				//while(AS3_ByteArray_readBytes(encoded_data, src, NO_OF_BYTES_30MS) == NO_OF_BYTES_30MS){
 				samples = WebRtcIlbcfix_Decode(Dec_Inst, (short *)&base64_decoded[j], NO_OF_BYTES_30MS, decoded_data, &speechType);
 				AS3_ByteArray_writeBytes(dest, decoded_data, samples * sizeof(short));
 				if(i % yieldTicks == 0){
-					AS3_CallT(progress, NULL, "IntType", (int)((float)i / loops * 100));
+					AS3_CallT(progress, NULL, "IntType", (int)((1 - ((float)bytesRemaining / srcLen)) * 100));
 					flyield();//yield to main process
-				}
-				i++;
+				};
 			}
 		}
 	}
