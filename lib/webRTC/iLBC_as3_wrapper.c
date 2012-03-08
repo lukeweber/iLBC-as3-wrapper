@@ -15,69 +15,8 @@
 #include "encode.h"
 #include "decode.h"
 #include "AS3.h"
-
-#define ILBCNOOFWORDS_MAX   (NO_OF_BYTES_30MS/2)
-
-/*----------------------------------------------------------------*
-*  Encoder interface function
-*---------------------------------------------------------------*/
-
-//short encode(   /* (o) Number of bytes encoded */
-//	iLBC_Enc_Inst_t *iLBCenc_inst,
-//								/* (i/o) Encoder instance */
-//	short *encoded_data,    /* (o) The encoded bytes */
-//	short *data                 /* (i) The signal block to encode*/
-//){
-//	float block[BLOCKL_MAX];
-//	int k;
-
-	/* convert signal to float */
-
-//	for (k=0; k<iLBCenc_inst->blockl; k++)
-//		block[k] = (float)data[k];
-
-	/* do the actual encoding */
-
-//	iLBC_encode((unsigned char *)encoded_data, block, iLBCenc_inst);
-
-
-//	return (iLBCenc_inst->no_of_bytes);
-//}
-
-/*----------------------------------------------------------------*
-*  Decoder interface function
-*---------------------------------------------------------------*/
-
-//short decode(       /* (o) Number of decoded samples */
-//	iLBC_Dec_Inst_t *iLBCdec_inst,  /* (i/o) Decoder instance */
-//	short *decoded_data,        /* (o) Decoded signal block*/
-//	short *encoded_data,        /* (i) Encoded bytes */
-//	short mode                       /* (i) 0=PL, 1=Normal */
-//){
-//	int k;
-//	float decblock[BLOCKL_MAX], dtmp;
-
-	/* check if mode is valid */
-
-//	if (mode<0 || mode>1) {
-//		printf("\nERROR - Wrong mode - 0, 1 allowed\n"); exit(3);}
-
-	/* do actual decoding of block */
-//	iLBC_decode(decblock, (unsigned char *)encoded_data, iLBCdec_inst, mode);
-
-	/* convert to short */
-//	for (k=0; k<iLBCdec_inst->blockl; k++){
-//		dtmp=decblock[k];
-
-//		if (dtmp<MIN_SAMPLE)
-//			dtmp=MIN_SAMPLE;
-//		else if (dtmp>MAX_SAMPLE)
-//			dtmp=MAX_SAMPLE;
-//		decoded_data[k] = (short) dtmp;
-//	}
-
-//	return (iLBCdec_inst->blockl);
-//}
+#include "b64/cencode.h"
+#include "b64/cdecode.h"
 
 int resetPositionByteArray(AS3_Val byteArray)
 {
@@ -95,6 +34,11 @@ static void encodeForFlash(void * self, AS3_Val args)
 	int len, srcLen, remainingBytes, yieldTicks;
 	short mode = 30;//30ms
 	short raw_data[BLOCKL_MAX], encoded_data[NO_OF_BYTES_30MS];
+	
+	//Base 64 logic
+	char base64data[BLOCKL_MAX * 2];
+	base64_encodestate state;
+	base64_init_encodestate(&state);
 
 	AS3_ArrayValue(args, "AS3ValType, AS3ValType, AS3ValType, IntType, IntType", &progress, &src, &dest, &srcLen, &yieldTicks);
 
@@ -106,9 +50,13 @@ static void encodeForFlash(void * self, AS3_Val args)
 	resetPositionByteArray(src);
 	while (remainingBytes > 0){
 		remainingBytes -= AS3_ByteArray_readBytes(raw_data, src,(mode<<3) * sizeof(short));
-		//len = encode(&Enc_Inst, encoded_data, raw_data);
-    	len=WebRtcIlbcfix_Encode(Enc_Inst, raw_data, (short)(mode<<3), encoded_data);
-		AS3_ByteArray_writeBytes(dest, encoded_data, len);
+		len=WebRtcIlbcfix_Encode(Enc_Inst, raw_data, (short)(mode<<3), encoded_data);
+		
+		//Base 64
+		len = base64_encode_block((char *)encoded_data, len, base64data, &state);
+		AS3_ByteArray_writeBytes(dest, base64data, len);
+		
+		//AS3_ByteArray_writeBytes(dest, encoded_data, len);
 		if(i % yieldTicks == 0){
 			AS3_CallT(progress, NULL, "IntType", (int)((1 - ((float)remainingBytes / srcLen)) * 100));
 			flyield();//yield to main process
@@ -116,8 +64,14 @@ static void encodeForFlash(void * self, AS3_Val args)
 		i++;
 	}
 
+	//Base 64
+	len = base64_encode_blockend(base64data, &state);
+	AS3_ByteArray_writeBytes(dest, base64data, len);
+	//free state?
+	
 	resetPositionByteArray(src);
 	resetPositionByteArray(dest);
+	
 	WebRtcIlbcfix_EncoderFree(Enc_Inst);
 	// Don't remove progess 100 call here, else complete won't be called!
 	AS3_CallT(progress, NULL, "IntType", 100);
@@ -130,7 +84,7 @@ static void decodeForFlash(void * self, AS3_Val args)
 	int len, srcLen, yieldTicks;
 	short encoded_data[NO_OF_WORDS_30MS], decoded_data[BLOCKL_MAX], speechType;
 	short mode = 30;//30 ms
-
+	
 	AS3_ArrayValue(args, "AS3ValType, AS3ValType, AS3ValType, IntType, IntType", &progress, &src, &dest, &srcLen, &yieldTicks);
 
 	iLBC_decinst_t *Dec_Inst;
@@ -141,17 +95,15 @@ static void decodeForFlash(void * self, AS3_Val args)
 	int loops = srcLen / NO_OF_BYTES_30MS;
 	resetPositionByteArray(src);
 	while(AS3_ByteArray_readBytes(encoded_data, src, NO_OF_BYTES_30MS) == NO_OF_BYTES_30MS){
-		//len = decode(&Dec_Inst, decoded_data, encoded_data, 1);//1 for no packet loss
 		len = WebRtcIlbcfix_Decode(Dec_Inst, encoded_data, NO_OF_BYTES_30MS, decoded_data, &speechType);
-		AS3_ByteArray_writeBytes(dest, decoded_data, len * sizeof(short));
-		/* write output file */
+		AS3_ByteArray_writeBytes(dest, decoded_data, len);
 		if(i % yieldTicks == 0){
 			AS3_CallT(progress, NULL, "IntType", (int)((float)i / loops * 100));
 			flyield();//yield to main process
 		}
 		i++;
 	}
-
+	
 	resetPositionByteArray(src);
 	resetPositionByteArray(dest);
 	WebRtcIlbcfix_DecoderFree(Dec_Inst);

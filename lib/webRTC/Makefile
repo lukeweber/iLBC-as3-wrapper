@@ -3,12 +3,14 @@ ARCH=$(PROC)
 
 ILBC_PATH=webrtc/src/modules/audio_coding/codecs/ilbc/
 SPL_PATH=webrtc/src/common_audio/signal_processing/
+BASE64_PATH=../b64/
 
 C_INCLUDES := \
     -Iwebrtc/src/ \
     -I$(ILBC_PATH)interface/ \
     -I$(ILBC_PATH) \
-    -I$(SPL_PATH)include/
+    -I$(SPL_PATH)include/ \
+    -I$(BASE64_PATH)include/
 
 CFLAGS+= -Wall -O3
 CC_SWITCHES = -Wall -O3 $(C_INCLUDES)
@@ -120,29 +122,36 @@ SPL_SOURCES :=\
     complex_bit_reverse.c \
     spl_sqrt_floor.c
 
+BASE64_SOURCES = \
+    cencode.c \
+    cdecode.c
+    
+
 MAIN_SOURCE = iLBC_as3_wrapper.c
 
 RES_SPL_SOURCES = $(addprefix $(SPL_PATH), $(SPL_SOURCES))
 RES_ILBC_SOURCES = $(addprefix $(ILBC_PATH), $(ILBC_SOURCES))
+RES_BASE64_SOURCES = $(addprefix $(BASE64_PATH), $(BASE64_SOURCES))
 
 ILBC = $(RES_ILBC_SOURCES:.c=.o)
 SPL = $(RES_SPL_SOURCES:.c=.o)
+B64 = $(RES_BASE64_SOURCES:.c=.o)
 MAIN = $(MAIN_SOURCE:.c=.o)
 
 %.o: %.c
 	$(CC) $(CC_SWITCHES) -c $< -o $@
 
+all: compileswc
+
 extract:
 	svn co http://webrtc.googlecode.com/svn/trunk webrtc
 
-compileswc: $(ILBC) $(SPL) $(MAIN)
-	$(CC) $(CFLAGS) -swc -o $(PNAME).swc $(ILBC) $(SPL) $(MAIN)
+compileswc: $(ILBC) $(SPL) $(B64) $(MAIN)
+	$(CC) $(CFLAGS) -swc -o $(PNAME).swc $(ILBC) $(SPL) $(B64) $(MAIN)
 	mv $(PNAME).swc ../../bin/
 
-all: compileswc clean
-
 clean:
-	rm $(IBLC) $(SPL) $(MAIN)
+	rm $(IBLC) $(SPL) $(MAIN) $(B64)
 	cd $(ILBC_PATH)
 	rm -f core *.bak *.a *.exe *.exe.bc *.l.bc *.achacks.* *.stackdump *.swc
 	cd -
