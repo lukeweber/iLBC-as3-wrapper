@@ -9,13 +9,19 @@ To use this with a flash microphone sampledata/bytearray:
 * Convert from big to little endian for iLBC (just readFloat the byte array into a little endian array.
 * Convert from 32 bit float to 16 bit signed audio (example below)
 
-### iLBC encode input and decode output
+### default iLBC encode input and decode output
 
 PCM 16 bit signed, little-Endian, 8 kHz
 
 ### Flash Microphone audio
 
 PCM 32 bit float, Big-Endian, mic.rate kHz [Flash Microphone Doc](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/media/Microphone.html). This means that to use this with flash audio you will need to set mic.rate=8 and convert from float to short.
+
+### ILB wrapper input/output
+
+Encoder takes PCM 16 bit 8 kHz audio and decoder outputs PCM 16 bit 44.1 kHz.
+Optionally it can use base64 for encoder output and decoder input with the
+special base64 swc.
 
 ### Compile iLBC.swc (optional)
 
@@ -34,6 +40,8 @@ the repo. Confirmed working build of webrtc with revision 1842 of trunk.
 	$ alc-on
 	$ make extract
 	$ make all
+
+Optionally you can run  make compileswcb64 which will give you a swc that uses base64 encoding for encoder output and decoder input.
 
 Example
 ------------

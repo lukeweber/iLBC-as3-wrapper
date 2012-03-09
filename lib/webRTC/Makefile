@@ -17,6 +17,10 @@ CC_SWITCHES = -Wall -O3 $(C_INCLUDES)
 
 PNAME = iLBC_webrtc
 
+#BASE64 input/output version
+PNAMEB64 = iLBC_webrtcb64
+DEFS = -DUSE_BASE64
+
 ILBC_SOURCES :=\
     abs_quant.c \
     abs_quant_loop.c \
@@ -125,7 +129,6 @@ SPL_SOURCES :=\
 BASE64_SOURCES = \
     cencode.c \
     cdecode.c
-    
 
 MAIN_SOURCE = iLBC_as3_wrapper.c
 
@@ -141,17 +144,24 @@ MAIN = $(MAIN_SOURCE:.c=.o)
 %.o: %.c
 	$(CC) $(CC_SWITCHES) -c $< -o $@
 
+iLBC_as3_wrapper_b64.o: iLBC_as3_wrapper.c
+	$(CC) $(DEFS) $(CC_SWITCHES) -c iLBC_as3_wrapper.c -o iLBC_as3_wrapper_b64.o
+
 all: compileswc
 
 extract:
 	svn co http://webrtc.googlecode.com/svn/trunk webrtc
 
 compileswc: $(ILBC) $(SPL) $(B64) $(MAIN)
-	$(CC) $(CFLAGS) -swc -o $(PNAME).swc $(ILBC) $(SPL) $(B64) $(MAIN)
+	$(CC) $(CFLAGS) -swc -o $(PNAME).swc $(ILBC) $(SPL) $(MAIN)
 	mv $(PNAME).swc ../../bin/
 
+compileswcb64: $(ILBC) $(SPL) $(B64) iLBC_as3_wrapper_b64.o
+	$(CC) $(CFLAGS) -swc -o $(PNAMEB64).swc $(ILBC) $(SPL) $(B64) iLBC_as3_wrapper_b64.o
+	mv $(PNAMEB64).swc ../../bin/
+
 clean:
-	rm $(IBLC) $(SPL) $(MAIN) $(B64)
+	rm $(ILBC) $(SPL) $(MAIN) $(B64)
 	cd $(ILBC_PATH)
 	rm -f core *.bak *.a *.exe *.exe.bc *.l.bc *.achacks.* *.stackdump *.swc
 	cd -
