@@ -19,9 +19,7 @@ PCM 32 bit float, Big-Endian, mic.rate kHz [Flash Microphone Doc](http://help.ad
 
 ### ILB wrapper input/output
 
-Encoder takes PCM 16 bit 8 kHz audio and decoder outputs PCM 16 bit 44.1 kHz.
-Optionally it can use base64 for encoder output and decoder input with the
-special base64 swc.
+Encoder takes big endian PCM 32 bit float, 8 kHz audio and decoder outputs little endian PCM 16 bit 44 kHz. Optionally it can use base64 for encoder output and decoder input with the special base64 swc. The input is the default audio that will come out of a flash microphone, if mic.rate = 8.
 
 ### Compile iLBC.swc (optional)
 

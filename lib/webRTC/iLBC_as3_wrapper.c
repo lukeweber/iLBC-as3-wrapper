@@ -34,20 +34,57 @@ float calculateStep(short a, short b, int samples){
 	return (float)(b - a) / samples;
 }
 
+float floatSwap( float f )
+{
+	union
+	{
+		float f;
+		unsigned char b[4];
+	} dat1, dat2;
+	
+	dat1.f = f;
+	dat2.b[0] = dat1.b[3];
+	dat2.b[1] = dat1.b[2];
+	dat2.b[2] = dat1.b[1];
+	dat2.b[3] = dat1.b[0];
+	return dat2.f;
+}
+
+void arrayfloatToShort(float* a, short* b, short samples){
+	const short shortMax = 32767;
+	const short shortMin = -32768;
+	float endian_float;
+	int i;
+	for (i = 0; i < samples; i++){
+		endian_float = floatSwap(a[i]);//Flash Mic data is Big Endian
+		if(endian_float > 1){
+			b[i] = shortMax;
+		} else if ( endian_float < -1){
+			b[i] = shortMin;
+		} else {
+			b[i] = (short)(endian_float * shortMax);
+		}
+	}
+}
+
 /**
  * 
  * @return count of samples in output
  */
 int upsample8to44(short* input, short* output, int samples){
 	int i, j, position, loop_samples;
-	float step;
+	float step, value1, value2;
 	position = 0;
+	
+	value1 = input[0];
 	for (i = 0; i < samples - 1; i++) {
 		loop_samples = 5 + (i % 2);//Switch between 5 or 6 to convert 8k to 44k
-		step = calculateStep(input[i], input[i+1], loop_samples);
+		value2 = input[i+1];
+		step = calculateStep(value1, value2, loop_samples);
 		for (j = 0; j < loop_samples; j++){
-			output[position++] = (short)(step * j) + input[i];
+			output[position++] = (short)(step * j) + value1;
 		}
+		value1 = value2;
 	}
 	output[position] = input[samples-1];
 	
@@ -60,7 +97,8 @@ static void encodeForFlash(void * self, AS3_Val args)
 	AS3_Val src, dest;
 	int len, srcLen, bytesRemaining, yieldTicks, samples;
 	short mode = 30;//30ms
-	short raw_data[BLOCKL_MAX], encoded_data[NO_OF_BYTES_30MS];
+	float raw_data[BLOCKL_MAX];
+	short encoded_data[NO_OF_BYTES_30MS];
 	
 #ifdef USE_BASE64
 	char base64_data[BLOCKL_MAX * 2];
@@ -78,30 +116,26 @@ static void encodeForFlash(void * self, AS3_Val args)
 	resetPositionByteArray(src);
 	int i;
 	for (i = 0; bytesRemaining > 0; i++){
-		bytesRemaining -= AS3_ByteArray_readBytes(raw_data, src,(mode<<3) * sizeof(short));
-		samples = WebRtcIlbcfix_Encode(Enc_Inst, raw_data, (short)(mode<<3), encoded_data);
-		
+		bytesRemaining -= AS3_ByteArray_readBytes(raw_data, src,(mode<<3) * sizeof(float));
+		arrayfloatToShort(raw_data, (short* )raw_data, (short)(mode<<3));
+		samples = WebRtcIlbcfix_Encode(Enc_Inst, (short* )raw_data, (short)(mode<<3), encoded_data);
 #ifdef USE_BASE64
 		len = base64_encode_block((char *)encoded_data, samples, base64_data, &state);
 		AS3_ByteArray_writeBytes(dest, base64_data, len);
 #else
 		AS3_ByteArray_writeBytes(dest, encoded_data, len);
 #endif
-	
 		if(i % yieldTicks == 0){
 			AS3_CallT(progress, NULL, "IntType", (int)((1 - ((float)bytesRemaining / srcLen)) * 100));
 			flyield();//yield to main process
 		}
 	}
-
 #ifdef USE_BASE64
 	len = base64_encode_blockend(base64_data, &state);
 	AS3_ByteArray_writeBytes(dest, base64_data, len);
 #endif
-
 	resetPositionByteArray(src);
 	resetPositionByteArray(dest);
-	
 	WebRtcIlbcfix_EncoderFree(Enc_Inst);
 	// Don't remove progess 100 call here, else complete won't be called!
 	AS3_CallT(progress, NULL, "IntType", 100);
@@ -122,7 +156,7 @@ static void decodeForFlash(void * self, AS3_Val args)
 	base64_decodestate state;
 	base64_init_decodestate(&state);
 #else
-	char raw_data[NO_OF_BYTES_30MS]
+	char raw_data[NO_OF_BYTES_30MS];
 #endif
 	
 	AS3_ArrayValue(args, "AS3ValType, AS3ValType, AS3ValType, IntType, IntType", &progress, &src, &dest, &srcLen, &yieldTicks);

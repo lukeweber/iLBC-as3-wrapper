@@ -144,10 +144,10 @@ MAIN = $(MAIN_SOURCE:.c=.o)
 %.o: %.c
 	$(CC) $(CC_SWITCHES) -c $< -o $@
 
+all: compileswc
+
 iLBC_as3_wrapper_b64.o: iLBC_as3_wrapper.c
 	$(CC) $(DEFS) $(CC_SWITCHES) -c iLBC_as3_wrapper.c -o iLBC_as3_wrapper_b64.o
-
-all: compileswc
 
 extract:
 	svn co http://webrtc.googlecode.com/svn/trunk webrtc
