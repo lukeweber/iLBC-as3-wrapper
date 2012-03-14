@@ -80,7 +80,7 @@ int prepare_output(short* input, float* output, int samples){
 		}
 		value1 = value2;
 	}
-	output[position] = input[samples-1];
+	output[position] = short_to_float(input[samples-1]);
 	
 	return position+1;
 }
