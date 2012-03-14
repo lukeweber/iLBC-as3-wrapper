@@ -30,7 +30,7 @@ int resetPositionByteArray(AS3_Val byteArray)
 	return 0;
 }
 
-float calculateStep(short a, short b, int samples){
+float calculate_step(short a, short b, int samples){
 	return (float)(b - a) / samples;
 }
 
@@ -49,22 +49,34 @@ void arrayfloatToShort(float* a, short* b, short samples){
 	}
 }
 
+float short_to_float(short a){
+	const short shortMax = 32767;
+	float b = (float)(a / shortMax);
+		if(b > 1){
+			b = 1;
+		} else if ( b < -1){
+			b = -1;
+		}
+		return b;
+}
+
 /**
- * 
+ * Function will convert from 16bit to 32bit, 8000 to 44000 audio
+ *
  * @return count of samples in output
  */
-int upsample8to44(short* input, short* output, int samples){
+int prepare_output(short* input, float* output, int samples){
 	int i, j, position, loop_samples;
 	float step, value1, value2;
 	position = 0;
-	
-	value1 = input[0];
+
+	value1 = short_to_float(input[0]);
 	for (i = 0; i < samples - 1; i++) {
 		loop_samples = 5 + (i % 2);//Switch between 5 or 6 to convert 8k to 44k
-		value2 = input[i+1];
-		step = calculateStep(value1, value2, loop_samples);
+		value2 = short_to_float(input[i+1]);
+		step = calculate_step(value1, value2, loop_samples);
 		for (j = 0; j < loop_samples; j++){
-			output[position++] = (short)(step * j) + value1;
+			output[position++] =(step * j) + value1;
 		}
 		value1 = value2;
 	}
@@ -130,7 +142,7 @@ static void decodeForFlash(void * self, AS3_Val args)
 	int len, srcLen, yieldTicks, samples, bytesRemaining;
 	short decoded_data[BLOCKL_MAX], speechType;
 	short mode = 30;//30 ms
-	short upsampled_data[BLOCKL_MAX * 6];//Really 5.5
+	float output_buffer[BLOCKL_MAX * 6];//Really 5.5x blockl (8000 to 44000) hz, + float
 	
 #ifdef USE_BASE64
 	char raw_data[200];//200 base64 bytes will yield 150 bytes or 3 chunks of NO_OF_BYTES_30MS(50)
@@ -160,8 +172,8 @@ static void decodeForFlash(void * self, AS3_Val args)
 		if(len % NO_OF_BYTES_30MS == 0){
 			for(j = 0; j < len; j+= NO_OF_BYTES_30MS){
 				samples = WebRtcIlbcfix_Decode(Dec_Inst, (short *)&base64_decoded[j], NO_OF_BYTES_30MS, decoded_data, &speechType);
-				samples = upsample8to44(decoded_data, upsampled_data, samples);
-				AS3_ByteArray_writeBytes(dest, upsampled_data, samples * sizeof(short));
+				samples = prepare_output(decoded_data, output_buffer, samples);
+				AS3_ByteArray_writeBytes(dest, output_buffer, samples * sizeof(float));
 				if(k++ % yieldTicks == 0){
 					AS3_CallT(progress, NULL, "IntType", (int)((1 - ((float)bytesRemaining / srcLen)) * 100));
 					flyield();//yield to main process
@@ -175,8 +187,8 @@ static void decodeForFlash(void * self, AS3_Val args)
 		len = AS3_ByteArray_readBytes(raw_data, src, NO_OF_BYTES_30MS);
 		bytesRemaining -= NO_OF_BYTES_30MS;
 		samples = WebRtcIlbcfix_Decode(Dec_Inst, (short *)raw_data, NO_OF_BYTES_30MS, decoded_data, &speechType);
-		samples = upsample8to44(decoded_data, upsampled_data, samples);
-		AS3_ByteArray_writeBytes(dest, upsampled_data, samples * sizeof(short));
+		samples = prepare_output(decoded_data, output_buffer, samples);
+		AS3_ByteArray_writeBytes(dest, output_buffer, samples * sizeof(float));
 		if(i++ % yieldTicks == 0){
 			AS3_CallT(progress, NULL, "IntType", (int)((1 - ((float)bytesRemaining / srcLen)) * 100));
 			flyield();//yield to main process
