@@ -30,7 +30,7 @@ int resetPositionByteArray(AS3_Val byteArray)
 	return 0;
 }
 
-float calculate_step(short a, short b, int samples){
+float calculate_step(float a, float b, int samples){
 	return (float)(b - a) / samples;
 }
 
@@ -50,7 +50,7 @@ void arrayfloatToShort(float* a, short* b, short samples){
 }
 
 float short_to_float(short a){
-	const short shortMax = 32767;
+	const float shortMax = 32767.0f;
 	float b = (float)(a / shortMax);
 		if(b > 1){
 			b = 1;
@@ -76,7 +76,7 @@ int prepare_output(short* input, float* output, int samples){
 		value2 = short_to_float(input[i+1]);
 		step = calculate_step(value1, value2, loop_samples);
 		for (j = 0; j < loop_samples; j++){
-			output[position++] =(step * j) + value1;
+			output[position++] = (float) (step * j) + value1;
 		}
 		value1 = value2;
 	}
