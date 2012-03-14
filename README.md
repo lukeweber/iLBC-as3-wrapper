@@ -11,15 +11,15 @@ To use this with a flash microphone sampledata/bytearray:
 
 ### default iLBC encode input and decode output
 
-PCM 16 bit signed, little-Endian, 8 kHz
+PCM 16 bit signed, little endian, 8 kHz
 
 ### Flash Microphone audio
 
-PCM 32 bit float, Big-Endian, mic.rate kHz [Flash Microphone Doc](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/media/Microphone.html). This means that to use this with flash audio you will need to set mic.rate=8 and convert from float to short.
+PCM 32 bit float, Big Endian, mic.rate kHz [Flash Microphone Doc](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/media/Microphone.html). This means that to use this with flash audio you will need to set mic.rate=8 and convert from float to short.
 
 ### ILB wrapper input/output
 
-Encoder takes big endian PCM 32 bit float, 8 kHz audio and decoder outputs little endian PCM 16 bit 44 kHz. Optionally it can use base64 for encoder output and decoder input with the special base64 swc. The input is the default audio that will come out of a flash microphone, if mic.rate = 8.
+Encoder takes little endian PCM 32 bit float, 8 kHz audio and decoder outputs little endian PCM 16 bit 44 kHz. Optionally it can use base64 for encoder output and decoder input with the special base64 swc. The input is the default audio that will come out of a flash microphone, if mic.rate = 8.
 
 ### Compile iLBC.swc (optional)
 

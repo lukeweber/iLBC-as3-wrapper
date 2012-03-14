@@ -34,35 +34,17 @@ float calculateStep(short a, short b, int samples){
 	return (float)(b - a) / samples;
 }
 
-float floatSwap( float f )
-{
-	union
-	{
-		float f;
-		unsigned char b[4];
-	} dat1, dat2;
-	
-	dat1.f = f;
-	dat2.b[0] = dat1.b[3];
-	dat2.b[1] = dat1.b[2];
-	dat2.b[2] = dat1.b[1];
-	dat2.b[3] = dat1.b[0];
-	return dat2.f;
-}
-
 void arrayfloatToShort(float* a, short* b, short samples){
 	const short shortMax = 32767;
 	const short shortMin = -32768;
-	float endian_float;
 	int i;
 	for (i = 0; i < samples; i++){
-		endian_float = floatSwap(a[i]);//Flash Mic data is Big Endian
-		if(endian_float > 1){
+		if(a[i] > 1){
 			b[i] = shortMax;
-		} else if ( endian_float < -1){
+		} else if ( a[i] < -1){
 			b[i] = shortMin;
 		} else {
-			b[i] = (short)(endian_float * shortMax);
+			b[i] = (short)(a[i] * shortMax);
 		}
 	}
 }
