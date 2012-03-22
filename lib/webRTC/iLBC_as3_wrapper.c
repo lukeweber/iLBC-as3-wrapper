@@ -21,7 +21,15 @@
 #include "b64/cdecode.h"
 #endif
 
-int resetPositionByteArray(AS3_Val byteArray)
+static iLBC_encinst_t *Enc_Inst;
+static iLBC_decinst_t *Dec_Inst;
+
+static int encoding = 0;
+static int decoding = 0;
+static int encoderReset = 0;
+static int decoderReset = 0;
+
+int reset_position_byte_array(AS3_Val byteArray)
 {
 	AS3_Val zero = AS3_Int(0);
 	/* just reset the position */
@@ -34,7 +42,7 @@ float calculate_step(float a, float b, int samples){
 	return (float)(b - a) / samples;
 }
 
-void arrayfloatToShort(float* a, short* b, short samples){
+void array_float_to_short(float* a, short* b, short samples){
 	const short shortMax = 32767;
 	const short shortMin = -32768;
 	int i;
@@ -52,12 +60,12 @@ void arrayfloatToShort(float* a, short* b, short samples){
 float short_to_float(short a){
 	const float shortMax = 32767.0f;
 	float b = (float)(a / shortMax);
-		if(b > 1){
-			b = 1;
-		} else if ( b < -1){
-			b = -1;
-		}
-		return b;
+	if(b > 1){
+		b = 1;
+	} else if ( b < -1){
+		b = -1;
+	}
+	return b;
 }
 
 /**
@@ -85,6 +93,20 @@ int prepare_output(short* input, float* output, int samples){
 	return position+1;
 }
 
+static void reset_encoder_impl(){
+	if(!encoding){
+		WebRtcIlbcfix_EncoderFree(Enc_Inst);
+		Enc_Inst = NULL;
+		encoderReset = 0;
+	} else {
+		encoderReset = 1;
+	}
+}
+
+static void resetEncoder(void * self, AS3_Val args){
+	reset_encoder_impl();
+}
+
 static void encodeForFlash(void * self, AS3_Val args)
 {
 	AS3_Val progress;
@@ -102,16 +124,18 @@ static void encodeForFlash(void * self, AS3_Val args)
 
 	AS3_ArrayValue(args, "AS3ValType, AS3ValType, AS3ValType, IntType, IntType", &progress, &src, &dest, &srcLen, &yieldTicks);
 
-	iLBC_encinst_t *Enc_Inst;
-	WebRtcIlbcfix_EncoderCreate(&Enc_Inst);
-	WebRtcIlbcfix_EncoderInit(Enc_Inst, mode);
+	encoding = 1;
+	if(Enc_Inst == NULL){
+		WebRtcIlbcfix_EncoderCreate(&Enc_Inst);
+		WebRtcIlbcfix_EncoderInit(Enc_Inst, mode);
+	}
 	
 	bytesRemaining = srcLen;
-	resetPositionByteArray(src);
+	reset_position_byte_array(src);
 	int i;
 	for (i = 0; bytesRemaining > 0; i++){
 		bytesRemaining -= AS3_ByteArray_readBytes(raw_data, src,(mode<<3) * sizeof(float));
-		arrayfloatToShort(raw_data, (short* )raw_data, (short)(mode<<3));
+		array_float_to_short(raw_data, (short* )raw_data, (short)(mode<<3));
 		samples = WebRtcIlbcfix_Encode(Enc_Inst, (short* )raw_data, (short)(mode<<3), encoded_data);
 #ifdef USE_BASE64
 		len = base64_encode_block((char *)encoded_data, samples, base64_data, &state);
@@ -128,11 +152,28 @@ static void encodeForFlash(void * self, AS3_Val args)
 	len = base64_encode_blockend(base64_data, &state);
 	AS3_ByteArray_writeBytes(dest, base64_data, len);
 #endif
-	resetPositionByteArray(src);
-	resetPositionByteArray(dest);
-	WebRtcIlbcfix_EncoderFree(Enc_Inst);
+	reset_position_byte_array(src);
+	reset_position_byte_array(dest);
 	// Don't remove progess 100 call here, else complete won't be called!
+	encoding = 0;
+	if(encoderReset){
+		reset_encoder_impl();
+	}
 	AS3_CallT(progress, NULL, "IntType", 100);
+}
+
+static void reset_decoder_impl(){
+	if(!decoding){
+		WebRtcIlbcfix_DecoderFree(Dec_Inst);
+		Dec_Inst = NULL;
+		decoderReset = 0;
+	} else {
+		decoderReset = 1;
+	}
+}
+
+static void resetDecoder(void * self, AS3_Val args){
+	reset_decoder_impl();
 }
 
 static void decodeForFlash(void * self, AS3_Val args)
@@ -155,11 +196,13 @@ static void decodeForFlash(void * self, AS3_Val args)
 	
 	AS3_ArrayValue(args, "AS3ValType, AS3ValType, AS3ValType, IntType, IntType", &progress, &src, &dest, &srcLen, &yieldTicks);
 
-	iLBC_decinst_t *Dec_Inst;
-	WebRtcIlbcfix_DecoderCreate(&Dec_Inst);
-	WebRtcIlbcfix_DecoderInit(Dec_Inst, mode);
+	decoding = 1;
+	if(Dec_Inst == NULL){
+		WebRtcIlbcfix_DecoderCreate(&Dec_Inst);
+		WebRtcIlbcfix_DecoderInit(Dec_Inst, mode);
+	}
 
-	resetPositionByteArray(src);
+	reset_position_byte_array(src);
 	bytesRemaining = srcLen;
 	
 #ifdef USE_BASE64
@@ -195,11 +238,14 @@ static void decodeForFlash(void * self, AS3_Val args)
 		}
 	}
 #endif
-		
-	resetPositionByteArray(src);
-	resetPositionByteArray(dest);
-	WebRtcIlbcfix_DecoderFree(Dec_Inst);
+	
+	reset_position_byte_array(src);
+	reset_position_byte_array(dest);
 	// Don't remove progess 100 call here, else complete won't be called!
+	decoding = 0;
+	if(decoderReset){
+		reset_decoder_impl();
+	}
 	AS3_CallT(progress, NULL, "IntType", 100);
 }
 
@@ -208,11 +254,17 @@ int main(int argc, char **argv)
 	AS3_Val ilbc_lib = AS3_Object("");
 	AS3_Val encodeMethod = AS3_FunctionAsync( NULL, (AS3_ThunkProc) encodeForFlash);
 	AS3_Val decodeMethod = AS3_FunctionAsync( NULL, (AS3_ThunkProc) decodeForFlash);
+	AS3_Val resetDecoderMethod = AS3_FunctionAsync( NULL, (AS3_ThunkProc) resetDecoder);
+	AS3_Val resetEncoderMethod = AS3_FunctionAsync( NULL, (AS3_ThunkProc) resetEncoder);
 	AS3_SetS(ilbc_lib, "encode", encodeMethod);
 	AS3_SetS(ilbc_lib, "decode", decodeMethod);
+	AS3_SetS(ilbc_lib, "resetEncoder", resetEncoderMethod);
+	AS3_SetS(ilbc_lib, "resetDecoder", resetDecoderMethod);
 	AS3_Release( encodeMethod );
 	AS3_Release( decodeMethod );
-	
+	AS3_Release( resetEncoderMethod );
+	AS3_Release( resetDecoderMethod );
+
 	//No code below here. AS3_LibInit does not return
 	AS3_LibInit( ilbc_lib );
 	return 0;
