@@ -1,11 +1,3 @@
-/******************************************************************
-
-	iLBC Speech Coder as3 wrapper using Adobe Alchemy
-
-	iLBC_as3_wrapper.c
-
-******************************************************************/
-
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
