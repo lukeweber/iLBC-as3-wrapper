@@ -19,7 +19,7 @@ PCM 32 bit float, Big Endian, mic.rate kHz [Flash Microphone Doc](http://help.ad
 
 ### ILB wrapper input/output
 
-Encoder takes little endian PCM 32 bit float, 8 kHz audio and decoder outputs little endian PCM 16 bit 44 kHz. Optionally it can use base64 for encoder output and decoder input with the special base64 swc. The input is the default audio that will come out of a flash microphone, if mic.rate = 8.
+Encoder takes little endian PCM 32 bit float, 8 kHz audio and decoder outputs little endian PCM 32 bit float 44 kHz. Optionally it can use base64 for encoder output and decoder input with the special base64 swc. The input is the default audio that will come out of a flash microphone, if mic.rate = 8.
 
 ### Compile iLBC.swc (optional)
 
@@ -63,26 +63,26 @@ Encode
 
 	encodedData = new ByteArray();
 	encodedData.endian = Endian.LITTLE_ENDIAN;
-	ilbcCodec.encode(encodingCompleteHandler, encodingProgressHandler, rawPCMByteArray, encodedData, decodedData.length, yield);
+	ilbcCodec.encode(encodingCompleteHandler, encodingProgressHandler, rawPCMByteArray, encodedData, decodedData.length, yieldTicks);
 
 Decode
 
 	decodedData = new ByteArray();
 	decodedData.endian = Endian.LITTLE_ENDIAN;
-	ilbcCodec.decode(decodingCompleteHandler, decodingProgressHandler, encodedData, decodedData, encodedData.length, yield);
+	ilbcCodec.decode(decodingCompleteHandler, decodingProgressHandler, encodedData, decodedData, encodedData.length, yieldTicks);
 
 Progress Handler
 
 	function progressHandler(progress:int):void;
 
-32 bit floating point to 16 bit signed conversion
+Decode Complete Handler
 
-	private static const SHORT_MAX_VALUE:int = 0x7fff;
-	while( source.bytesAvailable ) {
-		var sample:Number = source.readFloat() * SHORT_MAX_VALUE;
-		// Make sure we don't overflow.
-		if (sample < -SHORT_MAX_VALUE) sample = -SHORT_MAX_VALUE;
-		else if (sample > SHORT_MAX_VALUE) sample = SHORT_MAX_VALUE;
+	function decodingCompleteHandler(event:Event):void {
+		ilbcCodec.decoderReset();
+	}
 
-		result.writeShort(sample);
+Encode Complete Handler
+
+	function encodingCompleteHandler(event:Event):void {
+		ilbcCodec.encoderReset();
 	}
