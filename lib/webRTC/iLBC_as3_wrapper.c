@@ -20,6 +20,7 @@ static int encoding = 0;
 static int decoding = 0;
 static int encoderReset = 0;
 static int decoderReset = 0;
+static float lastUpsampleValue = -2.0f;//Simply a magic number because range is -1 to 1
 
 int reset_position_byte_array(AS3_Val byteArray)
 {
@@ -34,61 +35,69 @@ float calculate_step(float a, float b, int samples){
 	return (float)(b - a) / samples;
 }
 
+float short_to_float(short a){
+	const float shortMax = 32767.0f;
+	float b = (float) (a / shortMax);
+	if(b > 1.0f){
+		//fprintf(stderr, "short_to_float >1, %f \n", b);
+		b = 1.0f;
+	} else if ( b < -1.0f){
+		//fprintf(stderr, "short_to_float < -1, %f \n", b);
+		b = -1.0f;
+	}
+	return b;
+}
+
 void array_float_to_short(float* a, short* b, short samples){
 	const short shortMax = 32767;
 	const short shortMin = -32768;
 	int i;
 	for (i = 0; i < samples; i++){
-		if(a[i] > 1){
+		if(a[i] > 1.0f ){
+			//fprintf(stderr, "array_float_to_short gt 1, %d\n", b[i]);
 			b[i] = shortMax;
-		} else if ( a[i] < -1){
+		} else if ( a[i] < -1.0f){
+			//fprintf(stderr, "array_float_to_short < -1, %d\n", b[i]);
 			b[i] = shortMin;
 		} else {
-			b[i] = (short)(a[i] * shortMax);
+			b[i] = a[i] * shortMax;
+			//fprintf(stderr, "--- short converted:, %d\n", b[i]);
 		}
 	}
 }
 
-float short_to_float(short a){
-	const float shortMax = 32767.0f;
-	float b = (float)(a / shortMax);
-	if(b > 1){
-		b = 1;
-	} else if ( b < -1){
-		b = -1;
-	}
-	return b;
-}
-
-/**
- * Function will convert from 16bit to 32bit, 8000 to 44000 audio
- *
- * @return count of samples in output
- */
 int prepare_output(short* input, float* output, int samples){
 	int i, j, position, loop_samples;
 	float step, value1, value2;
 	position = 0;
+	
+	//Codeblock to deal with upsampling accross boundaries.
+	if(lastUpsampleValue != -2.0f){
+		value1 = lastUpsampleValue;
+		i = 0;
+	} else {
+		value1 = short_to_float(input[0]);
+		i = 1;
+	}
 
-	value1 = short_to_float(input[0]);
-	for (i = 0; i < samples - 1; i++) {
-		loop_samples = 5 + (i % 2);//Switch between 5 or 6 to convert 8k to 44k
-		value2 = short_to_float(input[i+1]);
+	for (; i < samples; i++){
+		loop_samples = 5 + (i % 2);
+		value2 = short_to_float(input[i]);
 		step = calculate_step(value1, value2, loop_samples);
 		for (j = 0; j < loop_samples; j++){
-			output[position++] = (float) (step * j) + value1;
+			output[position++] = (float) step * j + value1;
 		}
 		value1 = value2;
 	}
-	output[position] = short_to_float(input[samples-1]);
-	
-	return position+1;
+
+	lastUpsampleValue = value2;
+
+	return position;
 }
 
 static void reset_encoder_impl(){
 	if(!encoding){
 		WebRtcIlbcfix_EncoderFree(Enc_Inst);
-		Enc_Inst = NULL;
 		encoderReset = 0;
 	} else {
 		encoderReset = 1;
@@ -127,7 +136,7 @@ static void encodeForFlash(void * self, AS3_Val args)
 	int i;
 	for (i = 0; bytesRemaining > 0; i++){
 		bytesRemaining -= AS3_ByteArray_readBytes(raw_data, src,(mode<<3) * sizeof(float));
-		array_float_to_short(raw_data, (short* )raw_data, (short)(mode<<3));
+		array_float_to_short(raw_data, (short* )raw_data, mode<<3);
 		samples = WebRtcIlbcfix_Encode(Enc_Inst, (short* )raw_data, (short)(mode<<3), encoded_data);
 #ifdef USE_BASE64
 		len = base64_encode_block((char *)encoded_data, samples, base64_data, &state);
@@ -157,8 +166,8 @@ static void encodeForFlash(void * self, AS3_Val args)
 static void reset_decoder_impl(){
 	if(!decoding){
 		WebRtcIlbcfix_DecoderFree(Dec_Inst);
-		Dec_Inst = NULL;
 		decoderReset = 0;
+		lastUpsampleValue = -2.0f;
 	} else {
 		decoderReset = 1;
 	}
