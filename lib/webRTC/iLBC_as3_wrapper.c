@@ -206,7 +206,7 @@ static void decodeForFlash(void * self, AS3_Val args)
 		len = base64_decode_block(raw_data, len, base64_decoded, &state);
 		if(len % NO_OF_BYTES_30MS == 0){
 			for(j = 0; j < len; j+= NO_OF_BYTES_30MS){
-				samples = WebRtcIlbcfix_Decode(Dec_Inst, (short *) &base64_decoded + j, NO_OF_BYTES_30MS, decoded_data, &speechType);
+				samples = WebRtcIlbcfix_Decode(Dec_Inst, (short *) &base64_decoded[j], NO_OF_BYTES_30MS, decoded_data, &speechType);
 				samples = prepare_output(decoded_data, output_buffer, samples);
 				AS3_ByteArray_writeBytes(dest, output_buffer, samples * sizeof(float));
 				if(k++ % yieldTicks == 0){
