@@ -47,9 +47,9 @@ Full Usage of bin/iLBC_webrtc.swc at src/org/ilbc/codec/ILBCCodec.as
 
 ### AS3 Code
 
-Methods encode and decode are asyncronous and take as their first params a callback for completed. As well yield param is frequency of loops of processing audio that will be completed before the function calls flyield(). flyeidl(): "This method will force the Alchemy state machine to give up it's time slice. Execution will return to the line following this call on the next Alchemy time-slicing timer tick." - Time slicing timer tick I believe is 1ms. 
-
-Imports
+Methods encode and decode are asyncronous and take as their first params a callback for completed. yieldTicks represents the number of
+ ticks the function loops on a encode/decode before it yields to the main thread. It should be noted that you don't want to reset the encoder
+ or decoder inbetween chunks of contiguous audio, but only once the audio has completely processed.
 
 	import cmodule.iLBC_webrtc.CLibInit;
 	import org.ilbc.event.ILBCEvent;

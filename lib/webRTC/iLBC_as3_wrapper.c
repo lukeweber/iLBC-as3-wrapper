@@ -106,12 +106,13 @@ static AS3_Val encodeForFlash(void * self, AS3_Val args)
 {
 	AS3_Val progress;
 	AS3_Val src, dest;
-	int len, srcLen, bytesRemaining, yieldTicks, samples;
+	int srcLen, bytesRemaining, yieldTicks, samples;
 	short mode = 30;//30ms
 	float raw_data[BLOCKL_MAX];
 	short encoded_data[NO_OF_BYTES_30MS];
 	
 #ifdef USE_BASE64
+	int len;
 	char base64_data[BLOCKL_MAX * 2];
 	base64_encodestate state;
 	base64_init_encodestate(&state);
@@ -136,14 +137,14 @@ static AS3_Val encodeForFlash(void * self, AS3_Val args)
 		len = base64_encode_block((char *)encoded_data, samples, base64_data, &state);
 		AS3_ByteArray_writeBytes(dest, base64_data, len);
 #else
-		AS3_ByteArray_writeBytes(dest, encoded_data, len);
+		AS3_ByteArray_writeBytes(dest, encoded_data, samples);
 #endif
 		if(i % yieldTicks == 0){
 			AS3_CallT(progress, NULL, "IntType", (int)((1 - ((float)bytesRemaining / srcLen)) * 100));
 			flyield();//yield to main process
 		}
 	}
-#ifdef USE_BASE64
+#ifdef USE_BASE64 //Pad the end of the base64 string
 	len = base64_encode_blockend(base64_data, &state);
 	AS3_ByteArray_writeBytes(dest, base64_data, len);
 #endif
@@ -178,12 +179,13 @@ static AS3_Val decodeForFlash(void * self, AS3_Val args)
 {
 	AS3_Val progress;
 	AS3_Val src, dest;
-	int len, srcLen, yieldTicks, samples, bytesRemaining;
+	int srcLen, yieldTicks, samples, bytesRemaining;
 	short decoded_data[BLOCKL_MAX], speechType;
 	short mode = 30;//30 ms
 	float output_buffer[BLOCKL_MAX * 6];//Really 5.5x blockl (8000 to 44000) hz, + float
 	
 #ifdef USE_BASE64
+	int len;
 	char raw_data[200];//200 base64 bytes will yield 150 bytes or 3 chunks of NO_OF_BYTES_30MS(50)
 	char base64_decoded[150];
 	base64_decodestate state;
@@ -225,7 +227,6 @@ static AS3_Val decodeForFlash(void * self, AS3_Val args)
 #else
 	int i = 0;
 	while(AS3_ByteArray_readBytes(raw_data, src, NO_OF_BYTES_30MS) == NO_OF_BYTES_30MS){
-		len = AS3_ByteArray_readBytes(raw_data, src, NO_OF_BYTES_30MS);
 		bytesRemaining -= NO_OF_BYTES_30MS;
 		samples = WebRtcIlbcfix_Decode(Dec_Inst, (short *)raw_data, NO_OF_BYTES_30MS, decoded_data, &speechType);
 		samples = prepare_output(decoded_data, output_buffer, samples);
