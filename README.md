@@ -1,13 +1,12 @@
 iLBC AS3 Wrapper
 ==========
 
-[Internet low bitrate codec](http://en.wikipedia.org/wiki/Internet_Low_Bit_Rate_Codec). This is a swc that wraps the base functionality of the iLBC codec as extraced from rfc3951. Codec is now maintained by google as part of the [WebRTC](http://www.webrtc.org/) project.
+[Internet low bitrate codec](http://en.wikipedia.org/wiki/Internet_Low_Bit_Rate_Codec). This is a swc that wraps the base functionality of the iLBC codec now maintained by google as part of the [WebRTC](http://www.webrtc.org/) project.
 
 To use this with a flash microphone sampledata/bytearray:
 
 * mic.rate = 8 // 8 kHz
 * Convert from big to little endian for iLBC (just readFloat the byte array into a little endian array.
-* Convert from 32 bit float to 16 bit signed audio (example below)
 
 ### default iLBC encode input and decode output
 
@@ -29,17 +28,14 @@ Encoder takes little endian PCM 32 bit float, 8 kHz audio and decoder outputs li
 
 [Getting Started/Install Adobe Alchemy](http://labs.adobe.com/wiki/index.php/Alchemy:Documentation:Getting_Started)
 
-Two options, you can use the rfc version in lib/rfc or you can use the more up
-to date and actively developed webRTC version at lib/webrtc. rfc as it's a test
-file should compile, webrtc may or may not compile based on future changes of
-the repo. Confirmed working build of webrtc with revision 1842 of trunk.
+Webrtc version contains the most changes including upsampling audio, short to float conversion, and base64 encoding, although there is a reference implementation that you can play around with build off of the rfc. I suggest using the webrtc version is it's still being developed by google. Confirmed working build of webrtc with revision 1842 of webrtc trunk.
 
-	$ cd (to webrtc or rfc directory)
+	$ cd lib/webRTC
 	$ alc-on
 	$ make extract
-	$ make all
-
-Optionally you can run  make compileswcb64 which will give you a swc that uses base64 encoding for encoder output and decoder input.
+	$ make compileswcb64
+	
+Optionally: make compileswc - which gives for input/output deals directly with raw audio instead of base64 data.
 
 Example
 ------------
@@ -49,7 +45,7 @@ Full Usage of bin/iLBC_webrtc.swc at src/org/ilbc/codec/ILBCCodec.as
 
 Methods encode and decode are asyncronous and take as their first params a callback for completed. yieldTicks represents the number of
  ticks the function loops on a encode/decode before it yields to the main thread. It should be noted that you don't want to reset the encoder
- or decoder inbetween chunks of contiguous audio, but only once the audio has completely processed.
+ or decoder in between chunks of contiguous audio, but only once the audio has been completely processed.
 
 	import cmodule.iLBC_webrtc.CLibInit;
 	import org.ilbc.event.ILBCEvent;
