@@ -16,11 +16,8 @@
 static iLBC_encinst_t *Enc_Inst;
 static iLBC_decinst_t *Dec_Inst;
 
-static int encoding = 0;
-static int decoding = 0;
-static int encoderReset = 0;
-static int decoderReset = 0;
-static float lastUpsampleValue = -2.0f;//Simply a magic number because range is -1 to 1
+static int encoding, decoding, encoderReset, decoderReset;
+static float lastUpsampleValue;
 
 int reset_position_byte_array(AS3_Val byteArray)
 {
@@ -39,10 +36,8 @@ float short_to_float(short a){
 	const float shortMax = 32767.0f;
 	float b = (float) (a / shortMax);
 	if(b > 1.0f){
-		//fprintf(stderr, "short_to_float >1, %f \n", b);
 		b = 1.0f;
 	} else if ( b < -1.0f){
-		//fprintf(stderr, "short_to_float < -1, %f \n", b);
 		b = -1.0f;
 	}
 	return b;
@@ -54,14 +49,11 @@ void array_float_to_short(float* a, short* b, short samples){
 	int i;
 	for (i = 0; i < samples; i++){
 		if(a[i] > 1.0f ){
-			//fprintf(stderr, "array_float_to_short gt 1, %d\n", b[i]);
 			b[i] = shortMax;
 		} else if ( a[i] < -1.0f){
-			//fprintf(stderr, "array_float_to_short < -1, %d\n", b[i]);
 			b[i] = shortMin;
 		} else {
 			b[i] = a[i] * shortMax;
-			//fprintf(stderr, "--- short converted:, %d\n", b[i]);
 		}
 	}
 }
@@ -98,17 +90,19 @@ int prepare_output(short* input, float* output, int samples){
 static void reset_encoder_impl(){
 	if(!encoding){
 		WebRtcIlbcfix_EncoderFree(Enc_Inst);
+		Enc_Inst = NULL;
 		encoderReset = 0;
 	} else {
 		encoderReset = 1;
 	}
 }
 
-static void resetEncoder(void * self, AS3_Val args){
+static AS3_Val resetEncoder(void * self, AS3_Val args){
 	reset_encoder_impl();
+	return AS3_Int(1);
 }
 
-static void encodeForFlash(void * self, AS3_Val args)
+static AS3_Val encodeForFlash(void * self, AS3_Val args)
 {
 	AS3_Val progress;
 	AS3_Val src, dest;
@@ -161,11 +155,13 @@ static void encodeForFlash(void * self, AS3_Val args)
 		reset_encoder_impl();
 	}
 	AS3_CallT(progress, NULL, "IntType", 100);
+	return AS3_Int(1);
 }
 
 static void reset_decoder_impl(){
 	if(!decoding){
 		WebRtcIlbcfix_DecoderFree(Dec_Inst);
+		Dec_Inst = NULL;
 		decoderReset = 0;
 		lastUpsampleValue = -2.0f;
 	} else {
@@ -173,11 +169,12 @@ static void reset_decoder_impl(){
 	}
 }
 
-static void resetDecoder(void * self, AS3_Val args){
+static AS3_Val resetDecoder(void * self, AS3_Val args){
 	reset_decoder_impl();
+	return AS3_Int(1);
 }
 
-static void decodeForFlash(void * self, AS3_Val args)
+static AS3_Val decodeForFlash(void * self, AS3_Val args)
 {
 	AS3_Val progress;
 	AS3_Val src, dest;
@@ -239,7 +236,7 @@ static void decodeForFlash(void * self, AS3_Val args)
 		}
 	}
 #endif
-	
+
 	reset_position_byte_array(src);
 	reset_position_byte_array(dest);
 	// Don't remove progess 100 call here, else complete won't be called!
@@ -248,15 +245,22 @@ static void decodeForFlash(void * self, AS3_Val args)
 		reset_decoder_impl();
 	}
 	AS3_CallT(progress, NULL, "IntType", 100);
+	return AS3_Int(1);
 }
 
 int main(int argc, char **argv)
 {
+	encoding = 0;
+	decoding = 0;
+	encoderReset = 0;
+	decoderReset = 0;
+	lastUpsampleValue = -2.0f;//Simply a magic number because range is -1 to 1
+	
 	AS3_Val ilbc_lib = AS3_Object("");
 	AS3_Val encodeMethod = AS3_FunctionAsync( NULL, (AS3_ThunkProc) encodeForFlash);
 	AS3_Val decodeMethod = AS3_FunctionAsync( NULL, (AS3_ThunkProc) decodeForFlash);
-	AS3_Val resetDecoderMethod = AS3_FunctionAsync( NULL, (AS3_ThunkProc) resetDecoder);
-	AS3_Val resetEncoderMethod = AS3_FunctionAsync( NULL, (AS3_ThunkProc) resetEncoder);
+	AS3_Val resetDecoderMethod = AS3_Function( NULL, (AS3_ThunkProc) resetDecoder);
+	AS3_Val resetEncoderMethod = AS3_Function( NULL, (AS3_ThunkProc) resetEncoder);
 	AS3_SetS(ilbc_lib, "encode", encodeMethod);
 	AS3_SetS(ilbc_lib, "decode", decodeMethod);
 	AS3_SetS(ilbc_lib, "resetEncoder", resetEncoderMethod);
