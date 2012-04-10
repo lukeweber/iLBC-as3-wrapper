@@ -175,10 +175,17 @@ compileswc: $(ILBC) $(SPL) $(B64) $(SYS) $(NC) $(MAIN)
 	mv $(PNAME).swc ../../bin/
 
 clean:
-	rm $(ILBC) $(SPL) $(MAIN) $(B64) $(NC) $(SYS)
+	rm iLBC_as3_wrapper_b64.o $(ILBC) $(SPL) $(MAIN) $(B64) $(NC) $(SYS)
 	cd $(ILBC_PATH)
 	rm -f core *.bak *.a *.exe *.exe.bc *.l.bc *.achacks.* *.stackdump *.swc
 	cd -
 	cd $(SPL_PATH)
 	rm -f core *.bak *.a *.exe *.exe.bc *.l.bc *.achacks.* *.stackdump *.swc
 	cd -
+	cd $(SYS_WRAPPER)
+	rm -f core *.bak *.a *.exe *.exe.bc *.l.bc *.achacks.* *.stackdump *.swc
+	cd -
+	cd $(NC_PATH)
+	rm -f core *.bak *.a *.exe *.exe.bc *.l.bc *.achacks.* *.stackdump *.swc
+	cd -
+
