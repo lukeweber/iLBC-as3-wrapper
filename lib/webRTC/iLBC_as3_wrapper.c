@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "ilbc.h"
+#include "noise_suppression_x.h"
 #include "defines.h"
 #include "encode.h"
 #include "decode.h"
@@ -13,8 +14,9 @@
 #include "b64/cdecode.h"
 #endif
 
-static iLBC_encinst_t *Enc_Inst;
-static iLBC_decinst_t *Dec_Inst;
+static iLBC_encinst_t *Enc_Inst = NULL;
+static iLBC_decinst_t *Dec_Inst = NULL;
+static NsxHandle *nsxInst = NULL;
 
 static int encoding, decoding, encoderReset, decoderReset;
 static float lastUpsampleValue;
@@ -26,6 +28,20 @@ int reset_position_byte_array(AS3_Val byteArray)
 	AS3_SetS((AS3_Val)byteArray, "position", zero);
 	AS3_Release(zero);
 	return 0;
+}
+
+void noise_supression(short* a, int samples, int ns_mode){
+	short tmp_input[80];
+	if(nsxInst == NULL){
+		WebRtcNsx_Create(&nsxInst);
+		WebRtcNsx_Init(nsxInst, 8000);//8000 hz sampling
+		WebRtcNsx_set_policy(nsxInst, ns_mode);//0: Mild, 1: Medium , 2: Aggressive
+	}
+	int i;
+	for (i = 0; i < samples; i+= 80){
+		memcpy(tmp_input, &a[i], 80 * sizeof(short));
+		WebRtcNsx_Process(nsxInst, tmp_input, NULL, (short *)&a[i], NULL);
+	}
 }
 
 float calculate_step(float a, float b, int samples){
@@ -63,7 +79,7 @@ int prepare_output(short* input, float* output, int samples){
 	float step, value1, value2;
 	position = 0;
 	
-	//Codeblock to deal with upsampling accross boundaries.
+	//Code block to deal with upsampling accross boundaries.
 	if(lastUpsampleValue != -2.0f){
 		value1 = lastUpsampleValue;
 		i = 0;
@@ -91,6 +107,8 @@ static void reset_encoder_impl(){
 	if(!encoding){
 		WebRtcIlbcfix_EncoderFree(Enc_Inst);
 		Enc_Inst = NULL;
+		WebRtcNsx_Free(nsxInst);
+		nsxInst = NULL;
 		encoderReset = 0;
 	} else {
 		encoderReset = 1;
@@ -104,9 +122,9 @@ static AS3_Val resetEncoder(void * self, AS3_Val args){
 
 static AS3_Val encodeForFlash(void * self, AS3_Val args)
 {
-	AS3_Val progress;
+    AS3_Val progress;
 	AS3_Val src, dest;
-	int srcLen, bytesRemaining, yieldTicks, samples;
+	int srcLen, bytesRemaining, yieldTicks, samples, ns_mode;
 	short mode = 30;//30ms
 	float raw_data[BLOCKL_MAX];
 	short encoded_data[NO_OF_BYTES_30MS];
@@ -118,7 +136,7 @@ static AS3_Val encodeForFlash(void * self, AS3_Val args)
 	base64_init_encodestate(&state);
 #endif
 
-	AS3_ArrayValue(args, "AS3ValType, AS3ValType, AS3ValType, IntType, IntType", &progress, &src, &dest, &srcLen, &yieldTicks);
+	AS3_ArrayValue(args, "AS3ValType, AS3ValType, AS3ValType, IntType, IntType, IntType", &progress, &src, &dest, &srcLen, &yieldTicks, &ns_mode);
 
 	encoding = 1;
 	if(Enc_Inst == NULL){
@@ -132,6 +150,9 @@ static AS3_Val encodeForFlash(void * self, AS3_Val args)
 	for (i = 0; bytesRemaining > 0; i++){
 		bytesRemaining -= AS3_ByteArray_readBytes(raw_data, src,(mode<<3) * sizeof(float));
 		array_float_to_short(raw_data, (short* )raw_data, mode<<3);
+		if(ns_mode){
+			noise_supression((short*)raw_data, mode<<3, ns_mode -1);
+		}
 		samples = WebRtcIlbcfix_Encode(Enc_Inst, (short* )raw_data, (short)(mode<<3), encoded_data);
 #ifdef USE_BASE64
 		len = base64_encode_block((char *)encoded_data, samples, base64_data, &state);
@@ -256,7 +277,7 @@ int main(int argc, char **argv)
 	encoderReset = 0;
 	decoderReset = 0;
 	lastUpsampleValue = -2.0f;//Simply a magic number because range is -1 to 1
-	
+
 	AS3_Val ilbc_lib = AS3_Object("");
 	AS3_Val encodeMethod = AS3_FunctionAsync( NULL, (AS3_ThunkProc) encodeForFlash);
 	AS3_Val decodeMethod = AS3_FunctionAsync( NULL, (AS3_ThunkProc) decodeForFlash);

@@ -18,7 +18,7 @@ PCM 32 bit float, Big Endian, mic.rate kHz [Flash Microphone Doc](http://help.ad
 
 ### ILB wrapper input/output
 
-Encoder takes little endian PCM 32 bit float, 8 kHz audio and decoder outputs little endian PCM 32 bit float 44 kHz. Optionally it can use base64 for encoder output and decoder input with the special base64 swc. The input is the default audio that will come out of a flash microphone, if mic.rate = 8.
+Encoder takes little endian PCM 32 bit float, 8 kHz audio and decoder outputs little endian PCM 32 bit float 44 kHz. Optionally it can use base64 for encoder output and decoder input with the special base64 swc. The input is the default audio that will come out of a flash microphone, if mic.rate = 8. If you want to have contiguous audio even if there are silent patches, I recommend setting mic.setSilenceLevel(0) from it's default of 10.
 
 ### Compile iLBC.swc (optional)
 
@@ -59,7 +59,8 @@ Encode
 
 	encodedData = new ByteArray();
 	encodedData.endian = Endian.LITTLE_ENDIAN;
-	ilbcCodec.encode(encodingCompleteHandler, encodingProgressHandler, rawPCMByteArray, encodedData, decodedData.length, yieldTicks);
+	//noiseSupression 1=>Mild, 2=>Medium, 3=>Aggressive
+	ilbcCodec.encode(encodingCompleteHandler, encodingProgressHandler, rawPCMByteArray, encodedData, decodedData.length, yieldTicks, noiseSupression);
 
 Decode
 

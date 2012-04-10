@@ -3,6 +3,8 @@ ARCH=$(PROC)
 
 ILBC_PATH=webrtc/src/modules/audio_coding/codecs/ilbc/
 SPL_PATH=webrtc/src/common_audio/signal_processing/
+NC_PATH=webrtc/src/modules/audio_processing/ns/
+SYS_WRAPPER_PATH=webrtc/src/system_wrappers/source/
 BASE64_PATH=../b64/
 
 C_INCLUDES := \
@@ -10,7 +12,9 @@ C_INCLUDES := \
     -I$(ILBC_PATH)interface/ \
     -I$(ILBC_PATH) \
     -I$(SPL_PATH)include/ \
-    -I$(BASE64_PATH)include/
+    -I$(BASE64_PATH)include/ \
+    -I$(SYS_WRAPPER_PATH)/../interface/ \
+    -I$(NC_PATH)include/
 
 CFLAGS+= -Wall -O3
 CC_SWITCHES = -Wall -O3 $(C_INCLUDES)
@@ -126,6 +130,13 @@ SPL_SOURCES :=\
     complex_bit_reverse.c \
     spl_sqrt_floor.c
 
+SYS_WRAPPER_SOURCES :=\
+    cpu_features.c
+
+NC_SOURCES :=\
+    noise_suppression_x.c \
+    nsx_core.c \
+
 BASE64_SOURCES = \
     cencode.c \
     cdecode.c
@@ -133,18 +144,21 @@ BASE64_SOURCES = \
 MAIN_SOURCE = iLBC_as3_wrapper.c
 
 RES_SPL_SOURCES = $(addprefix $(SPL_PATH), $(SPL_SOURCES))
+RES_NC_SOURCES = $(addprefix $(NC_PATH), $(NC_SOURCES))
 RES_ILBC_SOURCES = $(addprefix $(ILBC_PATH), $(ILBC_SOURCES))
 RES_BASE64_SOURCES = $(addprefix $(BASE64_PATH), $(BASE64_SOURCES))
 
 ILBC = $(RES_ILBC_SOURCES:.c=.o)
 SPL = $(RES_SPL_SOURCES:.c=.o)
+NC = $(RES_NC_SOURCES:.c=.o)
+SYS = $(SYS_WRAPPER_SOURCES:.c=.o)
 B64 = $(RES_BASE64_SOURCES:.c=.o)
 MAIN = $(MAIN_SOURCE:.c=.o)
 
 %.o: %.c
 	$(CC) $(CC_SWITCHES) -c $< -o $@
 
-all: compileswc
+all: compileswcb64
 
 iLBC_as3_wrapper_b64.o: iLBC_as3_wrapper.c
 	$(CC) $(DEFS) $(CC_SWITCHES) -c iLBC_as3_wrapper.c -o iLBC_as3_wrapper_b64.o
@@ -152,16 +166,16 @@ iLBC_as3_wrapper_b64.o: iLBC_as3_wrapper.c
 extract:
 	svn co http://webrtc.googlecode.com/svn/trunk webrtc
 
-compileswc: $(ILBC) $(SPL) $(B64) $(MAIN)
-	$(CC) $(CFLAGS) -swc -o $(PNAME).swc $(ILBC) $(SPL) $(MAIN)
-	mv $(PNAME).swc ../../bin/
-
-compileswcb64: $(ILBC) $(SPL) $(B64) iLBC_as3_wrapper_b64.o
-	$(CC) $(CFLAGS) -swc -o $(PNAMEB64).swc $(ILBC) $(SPL) $(B64) iLBC_as3_wrapper_b64.o
+compileswcb64: $(ILBC) $(SPL) $(B64) $(SYS) $(NC) iLBC_as3_wrapper_b64.o
+	$(CC) $(CFLAGS) -swc -o $(PNAMEB64).swc $(ILBC) $(SPL) $(B64) $(SYS) $(NC) iLBC_as3_wrapper_b64.o
 	mv $(PNAMEB64).swc ../../bin/
 
+compileswc: $(ILBC) $(SPL) $(B64) $(SYS) $(NC) $(MAIN)
+	$(CC) $(CFLAGS) -swc -o $(PNAME).swc $(ILBC) $(SPL) $(SYS) $(NC) $(MAIN)
+	mv $(PNAME).swc ../../bin/
+
 clean:
-	rm $(ILBC) $(SPL) $(MAIN) $(B64)
+	rm $(ILBC) $(SPL) $(MAIN) $(B64) $(NC) $(SYS)
 	cd $(ILBC_PATH)
 	rm -f core *.bak *.a *.exe *.exe.bc *.l.bc *.achacks.* *.stackdump *.swc
 	cd -
